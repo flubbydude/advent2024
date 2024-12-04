@@ -1,3 +1,18 @@
+use std::collections::HashMap;
+
+trait CollectToCounterExt<T> {
+    fn collect_to_counter(self) -> HashMap<T, usize>;
+}
+
+impl<T: std::hash::Hash + std::cmp::Eq, U: Iterator<Item = T>> CollectToCounterExt<T> for U {
+    fn collect_to_counter(self) -> HashMap<T, usize> {
+        self.fold(HashMap::new(), |mut acc, elem| {
+            *acc.entry(elem).or_insert(0) += 1;
+            acc
+        })
+    }
+}
+
 fn parse_input(input: &str) -> (Vec<usize>, Vec<usize>) {
     input
         .lines()
@@ -9,24 +24,36 @@ fn parse_input(input: &str) -> (Vec<usize>, Vec<usize>) {
         .unzip()
 }
 
-fn part1(mut list1: Vec<usize>, mut list2: Vec<usize>) -> usize {
-    list1.sort();
-    list2.sort();
-
+fn part1(list1: &[usize], list2: &[usize]) -> usize {
     list1
-        .into_iter()
-        .zip(list2.into_iter())
-        .map(|(e1, e2)| e1.abs_diff(e2))
+        .iter()
+        .zip(list2.iter())
+        .map(|(&e1, &e2)| e1.abs_diff(e2))
         .sum()
+}
+
+fn part2(list1: &[usize], list2: &[usize]) -> usize {
+    let counter1 = list1.iter().copied().collect_to_counter();
+    let counter2 = list2.iter().copied().collect_to_counter();
+
+    counter1
+        .into_iter()
+        .map(|(key, val)| key * val * (*counter2.get(&key).unwrap_or(&0)))
+        .sum::<usize>()
 }
 
 fn main() {
     let file_contents = std::fs::read("input.txt").unwrap();
     let file_contents_as_str = std::str::from_utf8(&file_contents).unwrap();
 
-    let (list1, list2) = parse_input(file_contents_as_str);
+    let (mut list1, mut list2) = parse_input(file_contents_as_str);
+    list1.sort();
+    list2.sort();
 
-    println!("{}", part1(list1, list2));
+    let (list1, list2) = (list1, list2);
+
+    println!("{}", part1(&list1, &list2));
+    println!("{}", part2(&list1, &list2));
 }
 
 #[cfg(test)]
@@ -50,8 +77,17 @@ mod tests {
 
     #[test]
     fn test_part1() {
+        let (mut list1, mut list2) = parse_input(TEST_INPUT);
+        list1.sort();
+        list2.sort();
+
+        assert_eq!(11, part1(&list1, &list2));
+    }
+
+    #[test]
+    fn test_part2() {
         let (list1, list2) = parse_input(TEST_INPUT);
 
-        assert_eq!(11, part1(list1, list2));
+        assert_eq!(31, part2(&list1, &list2));
     }
 }
