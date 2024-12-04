@@ -1,31 +1,46 @@
-use std::ops::Deref;
-
 trait LevelsExt {
-    fn is_safe(&self) -> bool;
+    fn is_safe(self) -> bool;
 
-    fn is_safe_lenient(&self) -> bool;
+    fn is_safe_lenient(self) -> bool;
 }
 
-impl<T: Deref<Target = [u8]>> LevelsExt for T {
-    fn is_safe(&self) -> bool {
-        let difference_helper = |window: &[u8]| (1..=3).contains(&window[0].abs_diff(window[1]));
+impl<T: Iterator<Item = u8>> LevelsExt for T {
+    fn is_safe(self) -> bool {
+        let mut peekable = self.peekable();
 
-        self.windows(2).all(difference_helper)
-            && (self.windows(2).all(|window| window[0] < window[1])
-                || self.windows(2).all(|window| window[0] >= window[1]))
+        let mut prev = match peekable.next() {
+            Some(x) => x,
+            None => return true,
+        };
+
+        let increasing = match peekable.peek() {
+            Some(&second) => second > prev,
+            None => return true,
+        };
+
+        while let Some(cur) = peekable.next() {
+            if !(1..=3).contains(&cur.abs_diff(prev)) || increasing != (cur > prev) {
+                return false;
+            }
+
+            prev = cur;
+        }
+
+        true
     }
 
-    fn is_safe_lenient(&self) -> bool {
-        if (&self[1..]).is_safe() || (&self[..self.len() - 1]).is_safe() {
+    fn is_safe_lenient(self) -> bool {
+        let vec = self.collect::<Vec<_>>();
+
+        if vec[1..].iter().copied().is_safe() || vec[..vec.len() - 1].iter().copied().is_safe() {
             return true;
         }
 
-        (1..self.len() - 1).any(|i| {
-            self.iter()
+        (1..vec.len() - 1).any(|i| {
+            vec.iter()
                 .copied()
                 .enumerate()
                 .filter_map(|(j, level)| if i == j { None } else { Some(level) })
-                .collect::<Vec<_>>()
                 .is_safe()
         })
     }
@@ -42,13 +57,16 @@ fn parse_input(input: &str) -> Vec<Vec<u8>> {
 }
 
 fn part1(input: &[Vec<u8>]) -> usize {
-    input.iter().filter(|&level| level.is_safe()).count()
+    input
+        .iter()
+        .filter(|&level| level.iter().copied().is_safe())
+        .count()
 }
 
 fn part2(input: &[Vec<u8>]) -> usize {
     input
         .iter()
-        .filter(|&level| level.is_safe_lenient())
+        .filter(|&level| level.iter().copied().is_safe_lenient())
         .count()
 }
 
