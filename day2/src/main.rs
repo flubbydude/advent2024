@@ -5,13 +5,13 @@ trait LevelsExt {
 }
 
 impl<T: Iterator<Item = u8>> LevelsExt for T {
-    fn is_safe(self) -> bool {
-        let mut peekable = self.peekable();
-
-        let mut prev = match peekable.next() {
+    fn is_safe(mut self) -> bool {
+        let mut prev = match self.next() {
             Some(x) => x,
             None => return true,
         };
+
+        let mut peekable = self.peekable();
 
         let increasing = match peekable.peek() {
             Some(&second) => second > prev,
