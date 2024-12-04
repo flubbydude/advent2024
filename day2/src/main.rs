@@ -59,14 +59,14 @@ fn parse_input(input: &str) -> Vec<Vec<u8>> {
 fn part1(input: &[Vec<u8>]) -> usize {
     input
         .iter()
-        .filter(|&level| level.iter().copied().is_safe())
+        .filter(|&levels| levels.iter().copied().is_safe())
         .count()
 }
 
 fn part2(input: &[Vec<u8>]) -> usize {
     input
         .iter()
-        .filter(|&level| level.is_safe_lenient())
+        .filter(|&levels| levels.is_safe_lenient())
         .count()
 }
 
