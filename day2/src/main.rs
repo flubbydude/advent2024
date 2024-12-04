@@ -12,7 +12,7 @@ impl<T: Deref<Target = [u8]>> LevelsExt for T {
 
         self.windows(2).all(difference_helper)
             && (self.windows(2).all(|window| window[0] < window[1])
-                || self.windows(2).rev().all(|window| window[0] >= window[1]))
+                || self.windows(2).all(|window| window[0] >= window[1]))
     }
 
     fn is_safe_lenient(&self) -> bool {
