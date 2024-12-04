@@ -1,7 +1,11 @@
+use std::ops::Deref;
+
 trait LevelsExt {
     fn is_safe(self) -> bool;
+}
 
-    fn is_safe_lenient(self) -> bool;
+trait LenientLevelsExt {
+    fn is_safe_lenient(&self) -> bool;
 }
 
 impl<T: Iterator<Item = u8>> LevelsExt for T {
@@ -28,12 +32,12 @@ impl<T: Iterator<Item = u8>> LevelsExt for T {
 
         true
     }
+}
 
-    fn is_safe_lenient(self) -> bool {
-        let vec = self.collect::<Vec<_>>();
-
-        (0..vec.len()).any(|i| {
-            vec.iter()
+impl<T: Deref<Target = [u8]>> LenientLevelsExt for T {
+    fn is_safe_lenient(&self) -> bool {
+        (0..self.len()).any(|i| {
+            self.iter()
                 .copied()
                 .enumerate()
                 .filter_map(|(j, level)| if i == j { None } else { Some(level) })
@@ -62,7 +66,7 @@ fn part1(input: &[Vec<u8>]) -> usize {
 fn part2(input: &[Vec<u8>]) -> usize {
     input
         .iter()
-        .filter(|&level| level.iter().copied().is_safe_lenient())
+        .filter(|&level| level.is_safe_lenient())
         .count()
 }
 
