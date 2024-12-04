@@ -32,11 +32,7 @@ impl<T: Iterator<Item = u8>> LevelsExt for T {
     fn is_safe_lenient(self) -> bool {
         let vec = self.collect::<Vec<_>>();
 
-        if vec[1..].iter().copied().is_safe() || vec[..vec.len() - 1].iter().copied().is_safe() {
-            return true;
-        }
-
-        (1..vec.len() - 1).any(|i| {
+        (0..vec.len()).any(|i| {
             vec.iter()
                 .copied()
                 .enumerate()
