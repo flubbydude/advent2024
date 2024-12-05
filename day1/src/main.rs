@@ -24,7 +24,10 @@ fn parse_input(input: &str) -> (Vec<usize>, Vec<usize>) {
         .unzip()
 }
 
-fn part1(list1: &[usize], list2: &[usize]) -> usize {
+fn part1(list1: &mut [usize], list2: &mut [usize]) -> usize {
+    list1.sort();
+    list2.sort();
+
     list1
         .iter()
         .zip(list2.iter())
@@ -47,12 +50,8 @@ fn main() {
     let file_contents_as_str = std::str::from_utf8(&file_contents).unwrap();
 
     let (mut list1, mut list2) = parse_input(file_contents_as_str);
-    list1.sort();
-    list2.sort();
 
-    let (list1, list2) = (list1, list2);
-
-    println!("{}", part1(&list1, &list2));
+    println!("{}", part1(&mut list1, &mut list2));
     println!("{}", part2(&list1, &list2));
 }
 
@@ -78,10 +77,7 @@ mod tests {
     #[test]
     fn test_part1() {
         let (mut list1, mut list2) = parse_input(TEST_INPUT);
-        list1.sort();
-        list2.sort();
-
-        assert_eq!(11, part1(&list1, &list2));
+        assert_eq!(11, part1(&mut list1, &mut list2));
     }
 
     #[test]
