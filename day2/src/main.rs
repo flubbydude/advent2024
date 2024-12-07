@@ -1,17 +1,13 @@
 use itertools::Itertools;
-use std::{iter::once, ops::Deref};
+use std::ops::Deref;
 
 trait LevelsExt {
     fn is_safe(&self) -> bool;
+    fn is_safe_lenient(&self) -> bool;
 }
 
 trait IterLevelsExt {
-    fn is_safe(self) -> bool;
     fn is_safe_ordered(self, increasing: bool) -> bool;
-}
-
-trait LenientLevelsExt {
-    fn is_safe_lenient(&self) -> bool;
 }
 
 fn passes_difference_rule(first: u8, second: u8) -> bool {
@@ -27,26 +23,6 @@ fn is_safe_adjacent(first: u8, second: u8, increasing: bool) -> bool {
 }
 
 impl<T: Iterator<Item = u8>> IterLevelsExt for T {
-    fn is_safe(mut self) -> bool {
-        let first = match self.next() {
-            Some(x) => x,
-            None => return true,
-        };
-
-        let second = match self.next() {
-            Some(x) => x,
-            None => return true,
-        };
-
-        if first == second || !passes_difference_rule(first, second) {
-            return false;
-        }
-
-        let increasing = first < second;
-
-        once(second).chain(self).is_safe_ordered(increasing)
-    }
-
     fn is_safe_ordered(self, increasing: bool) -> bool {
         self.tuple_windows()
             .all(|(a, b)| is_safe_adjacent(a, b, increasing))
@@ -55,11 +31,20 @@ impl<T: Iterator<Item = u8>> IterLevelsExt for T {
 
 impl<T: Deref<Target = [u8]>> LevelsExt for T {
     fn is_safe(&self) -> bool {
-        self.iter().copied().is_safe()
-    }
-}
+        if self.len() < 2 {
+            return true;
+        }
 
-impl<T: Deref<Target = [u8]>> LenientLevelsExt for T {
+        let first = self[0];
+        let second = self[1];
+
+        if first != second && passes_difference_rule(first, second) {
+            self[1..].iter().copied().is_safe_ordered(first < second)
+        } else {
+            false
+        }
+    }
+
     fn is_safe_lenient(&self) -> bool {
         [false, true].into_iter().any(|increasing| {
             let problem_index = match self
