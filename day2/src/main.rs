@@ -53,9 +53,15 @@ impl<T: Deref<Target = [u8]>> LevelsExt for T {
             [problem_index, problem_index + 1]
                 .into_iter()
                 .any(|index_to_remove| {
-                    self[..index_to_remove]
-                        .iter()
-                        .copied()
+                    let before_index_to_remove = if index_to_remove > 0 {
+                        Some(index_to_remove - 1)
+                    } else {
+                        None
+                    };
+
+                    before_index_to_remove
+                        .map(|i| self[i])
+                        .into_iter()
                         .chain(self[index_to_remove + 1..].iter().copied())
                         .is_safe_ordered(increasing)
                 })
