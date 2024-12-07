@@ -1,47 +1,92 @@
-use std::ops::Deref;
+use itertools::Itertools;
+use std::{iter::once, ops::Deref};
 
 trait LevelsExt {
+    fn is_safe(&self) -> bool;
+}
+
+trait IterLevelsExt {
     fn is_safe(self) -> bool;
+    fn is_safe_ordered(self, increasing: bool) -> bool;
 }
 
 trait LenientLevelsExt {
     fn is_safe_lenient(&self) -> bool;
 }
 
-impl<T: Iterator<Item = u8>> LevelsExt for T {
+fn passes_difference_rule(first: u8, second: u8) -> bool {
+    first.abs_diff(second) <= 3
+}
+
+fn passes_ordering_rule(first: u8, second: u8, increasing: bool) -> bool {
+    first != second && (increasing == (first < second))
+}
+
+fn is_safe_adjacent(first: u8, second: u8, increasing: bool) -> bool {
+    passes_difference_rule(first, second) && passes_ordering_rule(first, second, increasing)
+}
+
+impl<T: Iterator<Item = u8>> IterLevelsExt for T {
     fn is_safe(mut self) -> bool {
-        let mut prev = match self.next() {
+        let first = match self.next() {
             Some(x) => x,
             None => return true,
         };
 
-        let mut peekable = self.peekable();
-
-        let increasing = match peekable.peek() {
-            Some(&second) => second > prev,
+        let second = match self.next() {
+            Some(x) => x,
             None => return true,
         };
 
-        while let Some(cur) = peekable.next() {
-            if !(1..=3).contains(&cur.abs_diff(prev)) || increasing != (cur > prev) {
-                return false;
-            }
-
-            prev = cur;
+        if first == second || !passes_difference_rule(first, second) {
+            return false;
         }
 
-        true
+        let increasing = first < second;
+
+        once(second).chain(self).is_safe_ordered(increasing)
+    }
+
+    fn is_safe_ordered(self, increasing: bool) -> bool {
+        self.tuple_windows()
+            .all(|(a, b)| is_safe_adjacent(a, b, increasing))
     }
 }
 
-impl<T: Deref<Target = [u8]>> LenientLevelsExt for T {
+impl<T> LevelsExt for T
+where
+    T: Deref<Target = [u8]>,
+{
+    fn is_safe(&self) -> bool {
+        self.iter().copied().is_safe()
+    }
+}
+
+impl<T> LenientLevelsExt for T
+where
+    T: Deref<Target = [u8]>,
+{
     fn is_safe_lenient(&self) -> bool {
-        (0..self.len()).any(|i| {
-            self.iter()
+        [false, true].into_iter().any(|increasing| {
+            let problem_index = match self
+                .iter()
                 .copied()
-                .enumerate()
-                .filter_map(|(j, level)| if i == j { None } else { Some(level) })
-                .is_safe()
+                .tuple_windows()
+                .position(|(first, second)| !is_safe_adjacent(first, second, increasing))
+            {
+                Some(index) => index,
+                None => return true,
+            };
+
+            [problem_index, problem_index + 1]
+                .into_iter()
+                .any(|index_to_remove| {
+                    self[..index_to_remove]
+                        .iter()
+                        .copied()
+                        .chain(self[index_to_remove + 1..].iter().copied())
+                        .is_safe_ordered(increasing)
+                })
         })
     }
 }
@@ -57,10 +102,7 @@ fn parse_input(input: &str) -> Vec<Vec<u8>> {
 }
 
 fn part1(input: &[Vec<u8>]) -> usize {
-    input
-        .iter()
-        .filter(|&levels| levels.iter().copied().is_safe())
-        .count()
+    input.iter().filter(|&levels| levels.is_safe()).count()
 }
 
 fn part2(input: &[Vec<u8>]) -> usize {
