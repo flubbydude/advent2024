@@ -53,19 +53,13 @@ impl<T: Iterator<Item = u8>> IterLevelsExt for T {
     }
 }
 
-impl<T> LevelsExt for T
-where
-    T: Deref<Target = [u8]>,
-{
+impl<T: Deref<Target = [u8]>> LevelsExt for T {
     fn is_safe(&self) -> bool {
         self.iter().copied().is_safe()
     }
 }
 
-impl<T> LenientLevelsExt for T
-where
-    T: Deref<Target = [u8]>,
-{
+impl<T: Deref<Target = [u8]>> LenientLevelsExt for T {
     fn is_safe_lenient(&self) -> bool {
         [false, true].into_iter().any(|increasing| {
             let problem_index = match self
