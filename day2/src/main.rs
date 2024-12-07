@@ -35,14 +35,7 @@ impl<T: Deref<Target = [u8]>> LevelsExt for T {
             return true;
         }
 
-        let first = self[0];
-        let second = self[1];
-
-        if first != second && passes_difference_rule(first, second) {
-            self[1..].iter().copied().is_safe_ordered(first < second)
-        } else {
-            false
-        }
+        self.iter().copied().is_safe_ordered(self[0] < self[1])
     }
 
     fn is_safe_lenient(&self) -> bool {
