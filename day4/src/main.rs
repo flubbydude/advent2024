@@ -38,7 +38,7 @@ fn parse_input(input: &str) -> Array2D<u8> {
     Array2D::from_iter_row_major(
         input
             .chars()
-            .filter(|c| c.is_ascii() && !c.is_ascii_whitespace())
+            .filter(|c| !c.is_ascii_whitespace())
             .map(|c| c as u8),
         num_rows,
         num_cols,
