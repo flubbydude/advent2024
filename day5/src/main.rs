@@ -23,6 +23,29 @@ impl<T: Deref<Target = [u8]>> Update for T {
     }
 }
 
+fn create_rules_subgraph(pages: &[u8], rules: &HashMap<u8, Vec<u8>>) -> HashMap<u8, Vec<u8>> {
+    let pages_set: HashSet<u8> = pages.iter().copied().collect();
+    pages
+        .iter()
+        .copied()
+        .map(|page| {
+            (
+                page,
+                rules
+                    .get(&page)
+                    .map(|succs| {
+                        succs
+                            .iter()
+                            .copied()
+                            .filter(|succ| pages_set.contains(succ))
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+            )
+        })
+        .collect()
+}
+
 // assume all successors are also keys
 fn toposort_pages_by_rules(rules: &HashMap<u8, Vec<u8>>) -> Vec<u8> {
     enum Tag {
@@ -119,35 +142,12 @@ fn part1(input: &PuzzleInput) -> u64 {
 fn part2(PuzzleInput { rules, updates }: &PuzzleInput) -> u64 {
     updates
         .iter()
-        .filter_map(|update| {
-            if update.follows_rules(&rules) {
-                None
-            } else {
-                // copy over the rules for relevant pages, insert empty list if no rules
-                let pages_set: HashSet<u8> = update.iter().copied().collect();
-                let rules_subgraph: HashMap<u8, Vec<u8>> = update
-                    .iter()
-                    .copied()
-                    .map(|page| {
-                        (
-                            page,
-                            rules
-                                .get(&page)
-                                .map(|succs| {
-                                    succs
-                                        .iter()
-                                        .copied()
-                                        .filter(|succ| pages_set.contains(succ))
-                                        .collect()
-                                })
-                                .unwrap_or_default(),
-                        )
-                    })
-                    .collect();
-
-                let pages_ordering = toposort_pages_by_rules(&rules_subgraph);
-                Some(pages_ordering[pages_ordering.len() / 2] as u64)
-            }
+        .filter(|&update| !update.follows_rules(&rules))
+        .map(|update| {
+            // copy over the rules for relevant pages, insert empty list if no rules
+            let rules_subgraph = create_rules_subgraph(update, rules);
+            let pages_ordering = toposort_pages_by_rules(&rules_subgraph);
+            pages_ordering[pages_ordering.len() / 2] as u64
         })
         .sum()
 }
