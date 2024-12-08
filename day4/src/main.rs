@@ -76,9 +76,31 @@ fn part1(input: &Array2D<u8>) -> u64 {
     result
 }
 
-// fn part2(input: &str) -> usize {
-//     todo!()
-// }
+fn part2(input: &Array2D<u8>) -> usize {
+    if input.num_rows() < 3 || input.num_columns() < 3 {
+        return 0;
+    }
+
+    let is_xmas_cross = |(i, j)| {
+        if input[(i, j)] != b'A' {
+            return false;
+        }
+
+        let crosses = [
+            [input[(i - 1, j - 1)], input[(i + 1, j + 1)]],
+            [input[(i - 1, j + 1)], input[(i + 1, j - 1)]],
+        ];
+
+        crosses
+            .into_iter()
+            .all(|arr| arr == [b'M', b'S'] || arr == [b'S', b'M'])
+    };
+
+    (1..input.num_rows() - 1)
+        .flat_map(|i| (1..input.num_columns() - 1).map(move |j| (i, j)))
+        .filter(|&pos| is_xmas_cross(pos))
+        .count()
+}
 
 fn main() {
     let file_contents = std::fs::read("input.txt").unwrap();
@@ -87,18 +109,22 @@ fn main() {
     let input = parse_input(file_contents_as_str);
 
     println!("{}", part1(&input));
-    // println!("{}", part2(input));
+    println!("{}", part2(&input));
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    const SMALL_TEST_INPUT: &str = "..X...\n\
+    const SMALL_TEST_INPUT_1: &str = "..X...\n\
                                     .SAMX.\n\
                                     .A..A.\n\
                                     XMAS.S\n\
                                     .X....";
+
+    const SMALL_TEST_INPUT_2: &str = "M.M\n\
+                                      .A.\n\
+                                      S.S";
 
     const TEST_INPUT: &str = "MMMSXXMASM\n\
                               MSAMXMSMSA\n\
@@ -120,7 +146,7 @@ mod tests {
 
     #[test]
     fn test_part1_small() {
-        let input = parse_input(SMALL_TEST_INPUT);
+        let input = parse_input(SMALL_TEST_INPUT_1);
         assert_eq!(4, part1(&input))
     }
 
@@ -130,9 +156,15 @@ mod tests {
         assert_eq!(18, part1(&input))
     }
 
-    // #[test]
-    // fn test_part2() {
-    //     let input = parse_input(TEST_INPUT);
-    //     assert_eq!(0, part2(input))
-    // }
+    #[test]
+    fn test_part2_small() {
+        let input = parse_input(SMALL_TEST_INPUT_2);
+        assert_eq!(1, part2(&input))
+    }
+
+    #[test]
+    fn test_part2() {
+        let input = parse_input(TEST_INPUT);
+        assert_eq!(9, part2(&input))
+    }
 }
