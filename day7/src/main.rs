@@ -18,13 +18,10 @@ impl From<&str> for Equation {
 }
 
 impl Equation {
-    fn equals_with_operators(&self, operators: &[fn(u64, u64) -> u64]) -> bool {
-        if self.right.len() != operators.len() + 1 {
-            panic!("operators is the incorrect length")
-        }
-
-        let mut operators_iter = operators.iter();
-
+    fn equals_with_operators(
+        &self,
+        mut operators_iter: impl Iterator<Item = fn(u64, u64) -> u64>,
+    ) -> bool {
         self.left
             == self
                 .right
@@ -38,7 +35,7 @@ impl Equation {
         (0..self.right.len() - 1)
             .map(|_| operators.iter().copied())
             .multi_cartesian_product()
-            .any(|operators_set| self.equals_with_operators(&operators_set))
+            .any(|operators_set| self.equals_with_operators(operators_set.iter().copied()))
     }
 }
 
@@ -47,17 +44,32 @@ fn parse_input(input: &str) -> Vec<Equation> {
 }
 
 fn part1(input: &[Equation]) -> u64 {
-    const OPERATORS: &[fn(u64, u64) -> u64; 2] = &[ops::Add::add, ops::Mul::mul];
     input
         .iter()
-        .filter(|&eqn| eqn.is_possible_with_operators(OPERATORS))
+        .filter(|&eqn| eqn.is_possible_with_operators(&[ops::Add::add, ops::Mul::mul]))
         .map(|eqn| eqn.left)
         .sum()
 }
 
-// fn part2(input: &str) -> usize {
-//     todo!()
-// }
+fn part2(input: &[Equation]) -> u64 {
+    fn my_concat(mut a: u64, b: u64) -> u64 {
+        let mut b_copy = b;
+        while b_copy >= 10 {
+            a *= 10;
+            b_copy /= 10;
+        }
+
+        a *= 10;
+
+        a + b
+    }
+
+    input
+        .iter()
+        .filter(|&eqn| eqn.is_possible_with_operators(&[ops::Add::add, ops::Mul::mul, my_concat]))
+        .map(|eqn| eqn.left)
+        .sum()
+}
 
 fn main() {
     let file_contents = include_str!("../input.txt");
@@ -65,7 +77,7 @@ fn main() {
     let input = parse_input(file_contents);
 
     println!("{}", part1(&input));
-    // println!("{}", part2(input));
+    println!("{}", part2(&input));
 }
 
 #[cfg(test)]
@@ -105,9 +117,9 @@ mod tests {
         assert_eq!(3749, part1(&input))
     }
 
-    // #[test]
-    // fn test_part2() {
-    //     let input = parse_input(TEST_INPUT);
-    //     assert_eq!(0, part2(input))
-    // }
+    #[test]
+    fn test_part2() {
+        let input = parse_input(TEST_INPUT);
+        assert_eq!(11387, part2(&input))
+    }
 }
