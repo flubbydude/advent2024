@@ -11,8 +11,7 @@ fn part2(input: &str) -> usize {
 }
 
 fn main() {
-    let file_contents = std::fs::read("input.txt").unwrap();
-    let file_contents_as_str = std::str::from_utf8(&file_contents).unwrap();
+    let file_contents_as_str = include_str!("../input.txt");
 
     let input = parse_input(file_contents_as_str);
 
