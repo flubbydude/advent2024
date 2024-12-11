@@ -1,61 +1,32 @@
-use std::collections::{HashMap, HashSet};
+mod antenna;
+mod city_map;
+mod grid_cell;
 
+use std::{
+    collections::{HashMap, HashSet},
+    iter,
+};
+
+use antenna::Antenna;
 use array2d::Array2D;
+use city_map::CityMap;
+use grid_cell::GridCell;
 use itertools::Itertools;
+use num::Integer;
 
-trait CityMap {
-    fn antennae_iter(&self) -> impl Iterator<Item = Antenna> + '_;
-}
-
-impl CityMap for Array2D<GridCell> {
-    fn antennae_iter(&self) -> impl Iterator<Item = Antenna> {
-        self.enumerate_row_major().filter_map(|(position, cell)| {
-            if let &GridCell::Antenna { frequency } = cell {
-                Some(Antenna {
-                    frequency,
-                    position,
-                })
-            } else {
-                None
-            }
-        })
-    }
-}
-
-struct Antenna {
-    frequency: u8,
-    position: (usize, usize),
-}
-
-fn get_antinodes(
+fn get_antinodes_part1(
     pos1: (usize, usize),
     pos2: (usize, usize),
     num_rows: usize,
     num_columns: usize,
-) -> Vec<(usize, usize)> {
+) -> impl Iterator<Item = (usize, usize)> {
     // need to get 2v - w and 2w - v
 
     // idk if this even works but I love it?
     fn checked_2v_minus_w(v: (usize, usize), w: (usize, usize)) -> Option<(usize, usize)> {
         fn checked_2x_minus_y(x: usize, y: usize) -> Option<usize> {
-            // try to compute 2 * x with checked addition
-            let two_x_wrapped = match x.checked_add(x) {
-                // If no overflow, try checked subtraction
-                Some(z) => return z.checked_sub(y),
-                // If overflow, wrapping add to get (2 * x) mod (usize::MAX + 1)
-                None => x.wrapping_add(x),
-            };
-
-            // try to compute (2 * x) mod (usize::MAX + 1)
-            // using checked subtraction.
-            match two_x_wrapped.checked_sub(y) {
-                // If there is no underflow, then there is overflow
-                // in the calculation as a whole, so (2 * x) - y > usize::MAX
-                Some(_) => None,
-                // If there is underflow, then this is good as we go back to 2 * x - y
-                // and (2 * x) - y <= usize::MAX
-                None => Some(two_x_wrapped.wrapping_sub(y)),
-            }
+            // assume x + x can't overflow lol
+            (x + x).checked_sub(y)
         }
 
         Some((checked_2x_minus_y(v.0, w.0)?, checked_2x_minus_y(v.1, w.1)?))
@@ -67,35 +38,72 @@ fn get_antinodes(
     ]
     .into_iter()
     .flatten()
-    .filter(|&(i, j)| i < num_rows && j < num_columns)
-    .collect()
+    .filter(move |&(i, j)| i < num_rows && j < num_columns)
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum GridCell {
-    Empty,
-    Antenna { frequency: u8 },
-}
+fn get_antinodes_part2(
+    pos1: (usize, usize),
+    pos2: (usize, usize),
+    num_rows: usize,
+    num_columns: usize,
+) -> impl Iterator<Item = (usize, usize)> {
+    let delta = if pos1.0 == pos2.0 {
+        (0, 1)
+    } else if pos1.1 == pos2.1 {
+        (1, 0)
+    } else {
+        let gcd = pos2.0.abs_diff(pos1.0).gcd(&pos2.1.abs_diff(pos1.1));
 
-impl TryFrom<char> for GridCell {
-    type Error = &'static str;
+        let delta_i = (pos2.0 as isize - pos1.0 as isize) / (gcd as isize);
+        let delta_j = (pos2.1 as isize - pos1.1 as isize) / (gcd as isize);
 
-    fn try_from(value: char) -> Result<Self, Self::Error> {
-        if value.is_ascii_alphanumeric() {
-            Ok(GridCell::Antenna {
-                frequency: value as u8,
-            })
-        } else if value == '.' {
-            Ok(GridCell::Empty)
-        } else {
-            Err("Failed parsing {value} into GridCell")
-        }
-    }
+        (delta_i, delta_j)
+    };
+
+    let create_iter = |mut start: (usize, usize), delta: (isize, isize)| {
+        let mut done = false;
+        iter::from_fn(move || {
+            if done {
+                return None;
+            }
+
+            let result = start;
+            match start.0.checked_add_signed(delta.0) {
+                Some(i) => {
+                    if i >= num_rows {
+                        done = true;
+                    } else {
+                        start.0 = i;
+                    }
+                }
+                None => done = true,
+            };
+            match start.1.checked_add_signed(delta.1) {
+                Some(j) => {
+                    if j >= num_columns {
+                        done = true;
+                    } else {
+                        start.1 = j;
+                    }
+                }
+                None => done = true,
+            };
+
+            Some(result)
+        })
+    };
+
+    create_iter(pos1, delta).chain(create_iter(pos1, (-delta.0, -delta.1)))
 }
 
 fn parse_input(input: &str) -> Array2D<GridCell> {
     let num_rows = input.lines().count();
     let num_columns = input.lines().next().unwrap().len();
+
+    // now we can always change to isize
+    if num_rows > (isize::MAX / 2) as usize || num_columns > (isize::MAX / 2) as usize {
+        panic!("Now this is crazy!");
+    }
 
     Array2D::from_iter_row_major(
         input
@@ -107,7 +115,13 @@ fn parse_input(input: &str) -> Array2D<GridCell> {
     .unwrap()
 }
 
-fn part1(city_map: &Array2D<GridCell>) -> usize {
+fn run<T>(
+    city_map: &Array2D<GridCell>,
+    get_antinodes: fn((usize, usize), (usize, usize), usize, usize) -> T,
+) -> usize
+where
+    T: Iterator<Item = (usize, usize)>,
+{
     let mut antenna_positions_by_freq: HashMap<u8, Vec<(usize, usize)>> = HashMap::new();
     for Antenna {
         frequency,
@@ -143,7 +157,8 @@ fn main() {
 
     let input = parse_input(file_contents_as_str);
 
-    println!("{}", part1(&input));
+    println!("{}", run(&input, get_antinodes_part1));
+    println!("{}", run(&input, get_antinodes_part2));
 }
 
 #[cfg(test)]
@@ -183,6 +198,12 @@ mod tests {
     #[test]
     fn test_part1() {
         let input = parse_input(TEST_INPUT);
-        assert_eq!(14, part1(&input))
+        assert_eq!(14, run(&input, get_antinodes_part1))
+    }
+
+    #[test]
+    fn test_part2() {
+        let input = parse_input(TEST_INPUT);
+        assert_eq!(34, run(&input, get_antinodes_part2))
     }
 }
