@@ -123,7 +123,7 @@ fn part1(city_map: &Array2D<GridCell>) -> usize {
     let antenna_positions_by_freq = antenna_positions_by_freq;
 
     let antinode_positions = antenna_positions_by_freq
-        .into_values()
+        .values()
         .flat_map(|positions| {
             positions
                 .iter()
@@ -132,7 +132,6 @@ fn part1(city_map: &Array2D<GridCell>) -> usize {
                 .flat_map(|(pos1, pos2)| {
                     get_antinodes(pos1, pos2, city_map.num_rows(), city_map.num_columns())
                 })
-                .collect::<Vec<_>>()
         })
         .collect::<HashSet<_>>();
 
