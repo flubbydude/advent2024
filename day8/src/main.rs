@@ -121,6 +121,7 @@ fn part1(city_map: &Array2D<GridCell>) -> usize {
 
     let antenna_positions_by_freq = antenna_positions_by_freq;
 
+    // holy balls wat da heck
     let antinode_positions = antenna_positions_by_freq
         .into_values()
         .flat_map(|positions| {
