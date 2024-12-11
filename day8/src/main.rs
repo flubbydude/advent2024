@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use array2d::Array2D;
+use itertools::Itertools;
 
 trait CityMap {
     fn antennae_iter(&self) -> impl Iterator<Item = Antenna> + '_;
@@ -121,20 +122,13 @@ fn part1(city_map: &Array2D<GridCell>) -> usize {
 
     let antenna_positions_by_freq = antenna_positions_by_freq;
 
-    // holy balls wat da heck
     let antinode_positions = antenna_positions_by_freq
         .into_values()
         .flat_map(|positions| {
             positions
                 .iter()
                 .copied()
-                .enumerate()
-                .flat_map(|(i, pos1)| {
-                    positions[i + 1..]
-                        .iter()
-                        .copied()
-                        .map(move |pos2| (pos1, pos2))
-                })
+                .tuple_combinations()
                 .flat_map(|(pos1, pos2)| {
                     get_antinodes(pos1, pos2, city_map.num_rows(), city_map.num_columns())
                 })
