@@ -8,7 +8,6 @@ use std::collections::HashSet;
 use antinode_iter::AntinodeIter;
 use array2d::Array2D;
 use city_map::CityMap;
-use grid_cell::GridCell;
 use itertools::Itertools;
 
 fn get_antinodes_part1(
@@ -40,7 +39,7 @@ fn get_antinodes_part2(
         .chain(AntinodeIter::new(pos2, pos1, pos2, num_rows, num_columns))
 }
 
-fn parse_input(input: &str) -> Array2D<GridCell> {
+fn parse_input(input: &str) -> CityMap {
     let num_rows = input.lines().count();
     let num_columns = input.lines().next().unwrap().len();
 
@@ -57,10 +56,11 @@ fn parse_input(input: &str) -> Array2D<GridCell> {
         num_columns,
     )
     .unwrap()
+    .into()
 }
 
 fn run<T>(
-    city_map: &Array2D<GridCell>,
+    city_map: &CityMap,
     get_antinodes: fn((usize, usize), (usize, usize), usize, usize) -> T,
 ) -> usize
 where
