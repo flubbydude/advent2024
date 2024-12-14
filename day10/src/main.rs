@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use array2d::Array2D;
 use smallvec::SmallVec;
@@ -90,12 +90,70 @@ fn part1(grid: &Array2D<u8>) -> usize {
         .sum()
 }
 
+fn part2(grid: &Array2D<u8>) -> usize {
+    let mut num_ways_to_get_to_nines_from = Array2D::from_iter_row_major(
+        grid.enumerate_row_major().map(|(pos, &elem)| {
+            if elem == 9 {
+                Some(HashMap::from([(pos, 1)]))
+            } else {
+                None
+            }
+        }),
+        grid.num_rows(),
+        grid.num_columns(),
+    )
+    .unwrap();
+
+    for height in (0..9).rev() {
+        let positions_at_height =
+            grid.enumerate_row_major().filter_map(
+                |(pos, &elem)| {
+                    if elem == height {
+                        Some(pos)
+                    } else {
+                        None
+                    }
+                },
+            );
+
+        for position in positions_at_height {
+            for neighbor in get_neighbors(position, grid.num_rows(), grid.num_columns()) {
+                if grid[neighbor] == height + 1 {
+                    if let Some(from_counter) = num_ways_to_get_to_nines_from[neighbor].take() {
+                        if let Some(to_counter) = &mut num_ways_to_get_to_nines_from[position] {
+                            for (&nine_position, &count) in from_counter.iter() {
+                                to_counter
+                                    .entry(nine_position)
+                                    .and_modify(|cur_count| *cur_count += count)
+                                    .or_insert(count);
+                            }
+                        } else {
+                            num_ways_to_get_to_nines_from[position] = Some(from_counter.clone());
+                        }
+
+                        num_ways_to_get_to_nines_from[neighbor] = Some(from_counter);
+                    }
+                }
+            }
+        }
+    }
+
+    grid.enumerate_row_major()
+        .filter_map(|(position, &elem)| if elem == 0 { Some(position) } else { None })
+        .map(|position| match &num_ways_to_get_to_nines_from[position] {
+            Some(map) => map.values().copied().sum(),
+            None => 0,
+        })
+        .sum()
+}
+
 fn main() {
     let file_contents_as_str = include_str!("../input.txt");
 
     let grid = parse_input(file_contents_as_str);
 
     println!("{}", part1(&grid));
+    println!("{}", part2(&grid));
 }
 
 #[cfg(test)]
@@ -129,6 +187,12 @@ mod tests {
     #[test]
     fn test_part1() {
         let grid = parse_input(TEST_INPUT);
-        assert_eq!(36, part1(&grid))
+        assert_eq!(36, part1(&grid));
+    }
+
+    #[test]
+    fn test_part2() {
+        let grid = parse_input(TEST_INPUT);
+        assert_eq!(81, part2(&grid));
     }
 }
