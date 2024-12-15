@@ -84,10 +84,7 @@ fn part1(grid: &Array2D<u8>) -> usize {
 }
 
 fn part2(grid: &Array2D<u8>) -> usize {
-    run(grid)
-        .into_values()
-        .flat_map(|num_ways_to_get_to_nines| num_ways_to_get_to_nines.into_values())
-        .sum()
+    run(grid).into_values().flat_map(HashMap::into_values).sum()
 }
 
 fn main() {
