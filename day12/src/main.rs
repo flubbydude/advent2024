@@ -101,8 +101,7 @@ fn num_sides_in_direction(
     start: (usize, usize),
     direction: Direction,
 ) -> usize {
-    let mut seen = HashSet::new();
-    seen.insert(start);
+    let mut seen = HashSet::from([start]);
     let mut seen_side = HashSet::new();
 
     let region_plant = grid[start];
