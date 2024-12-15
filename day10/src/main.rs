@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use array2d::Array2D;
 use smallvec::SmallVec;
@@ -39,111 +39,54 @@ fn get_neighbors(
     result
 }
 
-fn part1(grid: &Array2D<u8>) -> usize {
-    let mut nines_reachable_from = Array2D::from_iter_row_major(
-        grid.enumerate_row_major().map(|(pos, &elem)| {
+fn run(grid: &Array2D<u8>) -> HashMap<(usize, usize), HashMap<(usize, usize), usize>> {
+    let mut frontier: HashMap<(usize, usize), HashMap<(usize, usize), usize>> = grid
+        .enumerate_row_major()
+        .filter_map(|(pos, &elem)| {
             if elem == 9 {
-                Some(HashSet::from([pos]))
+                Some((pos, HashMap::from([(pos, 1)])))
             } else {
                 None
             }
-        }),
-        grid.num_rows(),
-        grid.num_columns(),
-    )
-    .unwrap();
+        })
+        .collect();
 
     for height in (0..9).rev() {
-        let positions_at_height =
-            grid.enumerate_row_major().filter_map(
-                |(pos, &elem)| {
-                    if elem == height {
-                        Some(pos)
-                    } else {
-                        None
-                    }
-                },
-            );
-
-        for position in positions_at_height {
+        let mut next_frontier = HashMap::new();
+        for (position, num_ways_to_get_to_nines) in frontier {
             for neighbor in get_neighbors(position, grid.num_rows(), grid.num_columns()) {
-                if grid[neighbor] == height + 1 {
-                    if let Some(from_set) = nines_reachable_from[neighbor].take() {
-                        if let Some(to_set) = &mut nines_reachable_from[position] {
-                            to_set.extend(from_set.iter());
-                        } else {
-                            nines_reachable_from[position] = Some(from_set.clone());
-                        }
-                        nines_reachable_from[neighbor] = Some(from_set);
-                    }
+                if grid[neighbor] == height {
+                    next_frontier
+                        .entry(neighbor)
+                        .and_modify(|to_map: &mut HashMap<(usize, usize), usize>| {
+                            for (&nine_pos, &num_ways) in num_ways_to_get_to_nines.iter() {
+                                to_map
+                                    .entry(nine_pos)
+                                    .and_modify(|count| *count += num_ways)
+                                    .or_insert(num_ways);
+                            }
+                        })
+                        .or_insert(num_ways_to_get_to_nines.clone());
                 }
             }
         }
+        frontier = next_frontier;
     }
 
-    grid.enumerate_row_major()
-        .filter_map(|(position, &elem)| if elem == 0 { Some(position) } else { None })
-        .map(|position| match &nines_reachable_from[position] {
-            Some(set) => set.len(),
-            None => 0,
-        })
+    frontier
+}
+
+fn part1(grid: &Array2D<u8>) -> usize {
+    run(grid)
+        .into_values()
+        .map(|num_ways_to_get_to_nines| num_ways_to_get_to_nines.len())
         .sum()
 }
 
 fn part2(grid: &Array2D<u8>) -> usize {
-    let mut num_ways_to_get_to_nines_from = Array2D::from_iter_row_major(
-        grid.enumerate_row_major().map(|(pos, &elem)| {
-            if elem == 9 {
-                Some(HashMap::from([(pos, 1)]))
-            } else {
-                None
-            }
-        }),
-        grid.num_rows(),
-        grid.num_columns(),
-    )
-    .unwrap();
-
-    for height in (0..9).rev() {
-        let positions_at_height =
-            grid.enumerate_row_major().filter_map(
-                |(pos, &elem)| {
-                    if elem == height {
-                        Some(pos)
-                    } else {
-                        None
-                    }
-                },
-            );
-
-        for position in positions_at_height {
-            for neighbor in get_neighbors(position, grid.num_rows(), grid.num_columns()) {
-                if grid[neighbor] == height + 1 {
-                    if let Some(from_counter) = num_ways_to_get_to_nines_from[neighbor].take() {
-                        if let Some(to_counter) = &mut num_ways_to_get_to_nines_from[position] {
-                            for (&nine_position, &count) in from_counter.iter() {
-                                to_counter
-                                    .entry(nine_position)
-                                    .and_modify(|cur_count| *cur_count += count)
-                                    .or_insert(count);
-                            }
-                        } else {
-                            num_ways_to_get_to_nines_from[position] = Some(from_counter.clone());
-                        }
-
-                        num_ways_to_get_to_nines_from[neighbor] = Some(from_counter);
-                    }
-                }
-            }
-        }
-    }
-
-    grid.enumerate_row_major()
-        .filter_map(|(position, &elem)| if elem == 0 { Some(position) } else { None })
-        .map(|position| match &num_ways_to_get_to_nines_from[position] {
-            Some(map) => map.values().copied().sum(),
-            None => 0,
-        })
+    run(grid)
+        .into_values()
+        .flat_map(|num_ways_to_get_to_nines| num_ways_to_get_to_nines.into_values())
         .sum()
 }
 
