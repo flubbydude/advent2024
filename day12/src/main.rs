@@ -1,6 +1,6 @@
 mod direction;
 
-use std::collections::HashSet;
+use std::array;
 
 use array2d::Array2D;
 
@@ -96,71 +96,21 @@ fn part1(grid: &Array2D<u8>) -> usize {
     result
 }
 
-fn num_sides_in_direction(
-    grid: &Array2D<u8>,
-    start: (usize, usize),
-    direction: Direction,
-) -> usize {
-    let mut seen = HashSet::from([start]);
-    let mut seen_side = HashSet::new();
+fn part2(grid: &Array2D<u8>) -> usize {
+    let mut seen = Array2D::filled_with(false, grid.num_rows(), grid.num_columns());
+    let mut seen_fence_in_direction: [Array2D<bool>; 4] =
+        array::from_fn(|_| Array2D::filled_with(false, grid.num_rows(), grid.num_columns()));
+    let mut result = 0;
 
-    let region_plant = grid[start];
-    let mut stack = vec![start];
-
-    let is_fence_in_direction = |position| match get_neighbor_in_direction(
+    let is_fence_in_direction = |position, direction| match get_neighbor_in_direction(
         position,
         direction,
         grid.num_rows(),
         grid.num_columns(),
     ) {
-        Some(neighbor) => grid[neighbor] != region_plant,
+        Some(neighbor) => grid[neighbor] != grid[position],
         None => true,
     };
-
-    let mut result = 0;
-
-    while let Some(position) = stack.pop() {
-        if is_fence_in_direction(position) && !seen_side.contains(&position) {
-            result += 1;
-
-            seen_side.insert(position);
-            for perp_direction in [direction.turn_ccw(), direction.turn_cw()] {
-                let mut cur_position = position;
-
-                loop {
-                    cur_position = match get_neighbor_in_direction(
-                        cur_position,
-                        perp_direction,
-                        grid.num_rows(),
-                        grid.num_columns(),
-                    ) {
-                        Some(pos) => pos,
-                        None => break,
-                    };
-
-                    if grid[cur_position] == region_plant && is_fence_in_direction(cur_position) {
-                        seen_side.insert(cur_position);
-                    } else {
-                        break;
-                    }
-                }
-            }
-        }
-
-        for neighbor in get_neighbors(position, grid.num_rows(), grid.num_columns()) {
-            if grid[neighbor] == region_plant && !seen.contains(&neighbor) {
-                seen.insert(neighbor);
-                stack.push(neighbor);
-            }
-        }
-    }
-
-    result
-}
-
-fn part2(grid: &Array2D<u8>) -> usize {
-    let mut seen = Array2D::filled_with(false, grid.num_rows(), grid.num_columns());
-    let mut result = 0;
 
     for start in grid.indices_row_major() {
         if seen[start] {
@@ -172,9 +122,41 @@ fn part2(grid: &Array2D<u8>) -> usize {
         let region_plant = grid[start];
         let mut stack = vec![start];
         let mut area = 0;
+        let mut num_sides = 0;
 
         while let Some(position) = stack.pop() {
             area += 1;
+
+            for direction in all::<Direction>() {
+                let seen_fence = &mut seen_fence_in_direction[direction as usize];
+                if !seen_fence[position] && is_fence_in_direction(position, direction) {
+                    num_sides += 1;
+                    seen_fence[position] = true;
+                    for perp_direction in [direction.turn_ccw(), direction.turn_cw()] {
+                        let mut cur_position = position;
+
+                        loop {
+                            cur_position = match get_neighbor_in_direction(
+                                cur_position,
+                                perp_direction,
+                                grid.num_rows(),
+                                grid.num_columns(),
+                            ) {
+                                Some(pos) => pos,
+                                None => break,
+                            };
+
+                            if grid[cur_position] == region_plant
+                                && is_fence_in_direction(cur_position, direction)
+                            {
+                                seen_fence[cur_position] = true;
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
 
             for neighbor in get_neighbors(position, grid.num_rows(), grid.num_columns()) {
                 if grid[neighbor] == region_plant && !seen[neighbor] {
@@ -183,10 +165,6 @@ fn part2(grid: &Array2D<u8>) -> usize {
                 }
             }
         }
-
-        let num_sides: usize = all::<Direction>()
-            .map(|direction| num_sides_in_direction(grid, start, direction))
-            .sum();
 
         result += area * num_sides;
     }
