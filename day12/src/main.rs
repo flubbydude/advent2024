@@ -5,7 +5,7 @@ use std::array;
 use array2d::Array2D;
 
 use direction::Direction;
-use enum_iterator::all;
+use enum_iterator::{all, cardinality};
 
 fn parse_input(input: &str) -> Array2D<u8> {
     let num_rows = input.lines().count();
@@ -98,7 +98,7 @@ fn part1(grid: &Array2D<u8>) -> usize {
 
 fn part2(grid: &Array2D<u8>) -> usize {
     let mut seen = Array2D::filled_with(false, grid.num_rows(), grid.num_columns());
-    let mut seen_fence_in_direction: [Array2D<bool>; 4] =
+    let mut seen_fence_in_direction: [Array2D<bool>; cardinality::<Direction>()] =
         array::from_fn(|_| Array2D::filled_with(false, grid.num_rows(), grid.num_columns()));
     let mut result = 0;
 
