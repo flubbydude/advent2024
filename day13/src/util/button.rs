@@ -15,7 +15,7 @@ impl Button {
         let (_, [label, x_str, y_str]) = BUTTON_REGEX.captures(button_str).unwrap().extract();
 
         let mut chrs = label.chars();
-        if chrs.next() != Some(expected_label) || chrs.next() != None {
+        if !(chrs.next() == Some(expected_label) && chrs.next() == None) {
             panic!("Wrong button label '{label}' expected to be '{expected_label}' in line: '{button_str}'");
         }
 
