@@ -13,8 +13,27 @@ pub struct Machine {
 impl Machine {
     pub fn fewest_tokens_to_win(&self) -> Option<usize> {
         // solve where:
-        // - a.x * a_presses + b.x * b_presses = prize.x
-        // - a.y * a_presses + b.y * b_presses = prize.y
+        // a.x * a_presses + b.x * b_presses = prize.x
+        // a.y * a_presses + b.y * b_presses = prize.y
+
+        // prize.x = b.x * b_presses (mod a.x)
+        // b_presses doesn't exist if all:
+        //   b.x = 0 (mod a.x),
+        //   prize.x = 0 (mod a.x),
+        //   b.x and prize.x NOT relatively prime
+        // then b_presses = prize.x * inverse(b.x) (mod a.x)
+
+        // prize.y = b.y * b_presses (mod a.y)
+
+        // prize.x = a.x * a_presses (mod b.x)
+        //
+
+        // prize.y = a.y * a_presses (mod b.y)
+        // prize.y = a.y * a_presses + b.y * b_presses (mod a.x)
+        //
+        // for some r, s:
+        //     (r * a.x + s * a.y) * a_presses + (r * b.x + s * b.y) * b_presses
+        //         = r * prize.x + s * prize.y
         //
         // minimize number of A presses since A costs 3 and B costs 1
         // return a_presses * 3 + b_presses
