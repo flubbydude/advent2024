@@ -6,8 +6,8 @@ static PRIZE_REGEX: Lazy<Regex> =
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Prize {
-    pub x: u32,
-    pub y: u32,
+    pub x: i32,
+    pub y: i32,
 }
 
 impl From<&str> for Prize {
