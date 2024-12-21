@@ -2,7 +2,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 
 static BUTTON_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^Button (A|B): X\+([0-9][1-9]), Y\+([0-9][1-9])$").unwrap());
+    Lazy::new(|| Regex::new(r"^Button (A|B): X\+([1-9][0-9]), Y\+([1-9][0-9])$").unwrap());
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Button {
@@ -12,7 +12,10 @@ pub struct Button {
 
 impl Button {
     fn from_button_str(button_str: &str, expected_label: char) -> Self {
-        let (_, [label, x_str, y_str]) = BUTTON_REGEX.captures(button_str).unwrap().extract();
+        let (_, [label, x_str, y_str]) = BUTTON_REGEX
+            .captures(button_str)
+            .expect(button_str)
+            .extract();
 
         let mut chrs = label.chars();
         if !(chrs.next() == Some(expected_label) && chrs.next() == None) {

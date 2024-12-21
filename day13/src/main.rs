@@ -2,7 +2,7 @@ mod util;
 
 use util::{parse_machines, Machine};
 
-fn part1(input: &[Machine]) -> usize {
+fn part1(input: &[Machine]) -> u32 {
     input.iter().filter_map(Machine::fewest_tokens_to_win).sum()
 }
 
