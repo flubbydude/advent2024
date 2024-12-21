@@ -4,10 +4,10 @@ use regex::Regex;
 static PRIZE_REGEX: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"^Prize: X=([1-9][0-9]{1,4}), Y=([1-9][0-9]{1,4})$").unwrap());
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Prize {
-    pub x: i32,
-    pub y: i32,
+    pub x: i64,
+    pub y: i64,
 }
 
 impl From<&str> for Prize {

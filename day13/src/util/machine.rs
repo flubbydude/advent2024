@@ -5,7 +5,7 @@ use num_integer::{ExtendedGcd, Integer};
 use super::button::Button;
 use super::prize::Prize;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Machine {
     a_button: Button,
     b_button: Button,
@@ -13,7 +13,13 @@ pub struct Machine {
 }
 
 impl Machine {
-    fn check(&self, a_presses: i32, b_presses: i32) {
+    pub fn into_part_2(mut self) -> Machine {
+        self.prize.x += 10000000000000;
+        self.prize.y += 10000000000000;
+        self
+    }
+
+    fn check(&self, a_presses: i64, b_presses: i64) {
         assert!(
             a_presses >= 0
                 && b_presses >= 0
@@ -26,16 +32,16 @@ impl Machine {
         );
     }
 
-    pub fn fewest_tokens_to_win(&self) -> Option<u32> {
+    pub fn fewest_tokens_to_win(&self) -> Option<u64> {
         if let Some((a_presses, b_presses)) = self.fewest_tokens_to_win_helper() {
             self.check(a_presses, b_presses);
-            Some((3 * a_presses + b_presses) as u32)
+            Some((3 * a_presses + b_presses) as u64)
         } else {
             None
         }
     }
 
-    fn fewest_tokens_to_win_helper(&self) -> Option<(i32, i32)> {
+    fn fewest_tokens_to_win_helper(&self) -> Option<(i64, i64)> {
         // solve where:
         // a.x * a_presses + b.x * b_presses = prize.x
         // a.y * a_presses + b.y * b_presses = prize.y

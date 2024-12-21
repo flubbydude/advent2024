@@ -4,10 +4,10 @@ use regex::Regex;
 static BUTTON_REGEX: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"^Button (A|B): X\+([1-9][0-9]), Y\+([1-9][0-9])$").unwrap());
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Button {
-    pub x: i32,
-    pub y: i32,
+    pub x: i64,
+    pub y: i64,
 }
 
 impl Button {
