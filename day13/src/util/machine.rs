@@ -73,6 +73,7 @@ impl Machine {
             if self.a_button.y * (s_y * (self.prize.y / gcd_y) - s_x * (self.prize.x / gcd_x))
                 == self.b_button.y * (t_x * (self.prize.x / gcd_x) - t_y * (self.prize.y / gcd_y))
             {
+                assert!(s_x > 0);
                 // v_0 = t_x * prize_x / gcd_x + a_x / b_x * (s_x * prize_x / gcd_x - u_0)
                 let a_presses = (s_x * p_prime_x).rem_euclid(self.b_button.x / gcd_x);
                 let b_presses = t_x * p_prime_x
