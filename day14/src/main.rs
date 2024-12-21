@@ -4,6 +4,7 @@ mod quadrant;
 mod robot;
 
 use enum_iterator::cardinality;
+
 use puzzle_input::PuzzleInput;
 use quadrant::Quadrant;
 use robot::Robot;
@@ -28,6 +29,19 @@ fn part1(puzzle_input: &PuzzleInput) -> usize {
     counts_by_quadrant.into_iter().product()
 }
 
+fn part2(mut puzzle_input: PuzzleInput) {
+    const NUM_STEPS: usize = 6752;
+    let bounds = puzzle_input.bounds().clone();
+
+    for _ in 0..NUM_STEPS {
+        for robot in puzzle_input.robots_mut() {
+            robot.step(&bounds);
+        }
+    }
+
+    println!("{}", puzzle_input.board_as_str());
+}
+
 fn main() {
     let file_contents_as_str = include_str!("../input.txt");
 
@@ -37,6 +51,7 @@ fn main() {
     let puzzle_input = PuzzleInput::new(num_rows, num_columns, robots);
 
     println!("{}", part1(&puzzle_input));
+    part2(puzzle_input);
 }
 
 #[cfg(test)]
