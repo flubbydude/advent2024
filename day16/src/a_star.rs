@@ -83,7 +83,7 @@ where
     None
 }
 
-struct BestPathsAStarEnv<'a, S, F, I, G>
+struct BestPathsHelperEnv<'a, S, F, I, G>
 where
     S: fmt::Debug + PartialEq + Eq + Hash + Clone,
     F: Fn(&S) -> I,
@@ -98,7 +98,7 @@ where
     best_paths: &'a mut Vec<Vec<S>>,
 }
 
-fn best_paths_helper<S, F, I, G>(state: S, cost: u64, env: &mut BestPathsAStarEnv<'_, S, F, I, G>)
+fn best_paths_helper<S, F, I, G>(state: S, cost: u64, env: &mut BestPathsHelperEnv<'_, S, F, I, G>)
 where
     S: fmt::Debug + PartialEq + Eq + Hash + Clone,
     F: Fn(&S) -> I,
@@ -159,7 +159,7 @@ where
     best_paths_helper(
         start_state,
         0,
-        &mut BestPathsAStarEnv {
+        &mut BestPathsHelperEnv {
             successors,
             is_goal,
             best_path_cost,
