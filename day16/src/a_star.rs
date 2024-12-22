@@ -1,6 +1,7 @@
 use std::{
     cmp::Ordering,
     collections::{BinaryHeap, HashMap, HashSet},
+    fmt,
     hash::Hash,
 };
 
@@ -23,24 +24,14 @@ impl<S: Eq> Ord for PriorityQueueItem<S> {
     }
 }
 
-struct ParentsEntry<S> {
-    cost: u64,
-    state: S,
-}
-
-pub struct AStarOutput<S> {
-    pub cost: u64,
-    pub _order: Vec<S>,
-}
-
-pub fn a_star<S, F, I, G, H>(
+pub fn best_cost_a_star<S, F, I, G, H>(
     start_state: S,
     successors: F,
     is_goal: G,
     heuristic: H,
-) -> Option<AStarOutput<S>>
+) -> Option<u64>
 where
-    S: PartialEq + Eq + Hash + Clone,
+    S: fmt::Debug + PartialEq + Eq + Hash + Clone,
     F: Fn(&S) -> I,
     I: Iterator<Item = (u64, S)>,
     G: Fn(&S) -> bool,
@@ -52,7 +43,7 @@ where
         state: start_state.clone(),
     }]);
     let mut seen: HashSet<S> = HashSet::new();
-    let mut parents: HashMap<S, ParentsEntry<S>> = HashMap::new();
+    let mut costs: HashMap<S, u64> = HashMap::new();
 
     while let Some(item) = frontier.pop() {
         if seen.contains(&item.state) {
@@ -60,17 +51,7 @@ where
         }
 
         if is_goal(&item.state) {
-            let mut result = Vec::new();
-            let mut last = &item.state;
-            while *last != start_state {
-                result.push(last.clone());
-                last = &parents[last].state;
-            }
-            result.reverse();
-            return Some(AStarOutput {
-                cost: item.cost,
-                _order: result,
-            });
+            return Some(item.cost);
         }
 
         seen.insert(item.state.clone());
@@ -81,20 +62,14 @@ where
             }
 
             let new_cost = item.cost + edge_cost;
-            if let Some(entry) = parents.get_mut(&successor) {
-                if entry.cost > new_cost {
-                    entry.cost = new_cost;
+            if let Some(entry) = costs.get_mut(&successor) {
+                if *entry > new_cost {
+                    *entry = new_cost;
                 } else {
                     continue;
                 }
             } else {
-                parents.insert(
-                    successor.clone(),
-                    ParentsEntry {
-                        cost: new_cost,
-                        state: item.state.clone(),
-                    },
-                );
+                costs.insert(successor.clone(), new_cost);
             }
 
             frontier.push(PriorityQueueItem {
@@ -106,4 +81,93 @@ where
     }
 
     None
+}
+
+struct BestPathsAStarEnv<'a, S, F, I, G>
+where
+    S: fmt::Debug + PartialEq + Eq + Hash + Clone,
+    F: Fn(&S) -> I,
+    I: Iterator<Item = (u64, S)>,
+    G: Fn(&S) -> bool,
+{
+    successors: F,
+    is_goal: G,
+    best_path_cost: u64,
+    open_set: &'a mut Vec<S>,
+    min_cost_seen: &'a mut HashMap<S, u64>,
+    best_paths: &'a mut Vec<Vec<S>>,
+}
+
+fn best_paths_helper<S, F, I, G>(state: S, cost: u64, env: &mut BestPathsAStarEnv<'_, S, F, I, G>)
+where
+    S: fmt::Debug + PartialEq + Eq + Hash + Clone,
+    F: Fn(&S) -> I,
+    I: Iterator<Item = (u64, S)>,
+    G: Fn(&S) -> bool,
+{
+    if (env.is_goal)(&state) {
+        if cost == env.best_path_cost {
+            let mut cloned_open_set = env.open_set.clone();
+            cloned_open_set.push(state.clone());
+            env.best_paths.push(cloned_open_set);
+        }
+        return;
+    }
+
+    match env.min_cost_seen.get_mut(&state) {
+        Some(min_cost_seen) => {
+            if *min_cost_seen < cost {
+                // prune the branch
+                return;
+            } else {
+                *min_cost_seen = cost;
+            }
+        }
+        None => {
+            env.min_cost_seen.insert(state.clone(), cost);
+        }
+    }
+
+    env.open_set.push(state.clone());
+
+    for (edge_cost, next_state) in (env.successors)(&state) {
+        let next_cost = cost + edge_cost;
+        if next_cost > env.best_path_cost {
+            continue;
+        }
+        best_paths_helper(next_state, next_cost, env);
+    }
+
+    assert_eq!(state, env.open_set.pop().unwrap());
+}
+
+pub fn best_paths<S, F, I, G>(
+    start_state: S,
+    successors: F,
+    is_goal: G,
+    best_path_cost: u64,
+) -> Vec<Vec<S>>
+where
+    S: fmt::Debug + PartialEq + Eq + Hash + Clone,
+    F: Fn(&S) -> I,
+    I: Iterator<Item = (u64, S)>,
+    G: Fn(&S) -> bool,
+{
+    let mut best_paths = Vec::new();
+
+    // use cost-limited DFS to find all paths
+    best_paths_helper(
+        start_state,
+        0,
+        &mut BestPathsAStarEnv {
+            successors,
+            is_goal,
+            best_path_cost,
+            open_set: &mut Vec::new(),
+            min_cost_seen: &mut HashMap::new(),
+            best_paths: &mut best_paths,
+        },
+    );
+
+    best_paths
 }
