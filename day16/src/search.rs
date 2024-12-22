@@ -31,7 +31,7 @@ pub fn best_cost_djikstra<S, F, I, G>(
 where
     S: fmt::Debug + PartialEq + Eq + Hash + Clone,
     F: Fn(&S) -> I,
-    I: Iterator<Item = (u64, S)>,
+    I: IntoIterator<Item = (u64, S)>,
     G: Fn(&S) -> bool,
 {
     let mut frontier = BinaryHeap::from_iter(
@@ -83,7 +83,7 @@ struct BestPathsHelperEnv<'a, S, F, I, G>
 where
     S: fmt::Debug + PartialEq + Eq + Hash + Clone,
     F: Fn(&S) -> I,
-    I: Iterator<Item = (u64, S)>,
+    I: IntoIterator<Item = (u64, S)>,
     G: Fn(&S) -> bool,
 {
     successors: &'a F,
@@ -98,7 +98,7 @@ fn best_paths_helper<S, F, I, G>(state: S, cost: u64, env: &mut BestPathsHelperE
 where
     S: fmt::Debug + PartialEq + Eq + Hash + Clone,
     F: Fn(&S) -> I,
-    I: Iterator<Item = (u64, S)>,
+    I: IntoIterator<Item = (u64, S)>,
     G: Fn(&S) -> bool,
 {
     if (env.is_goal)(&state) {
@@ -146,7 +146,7 @@ pub fn best_paths<S, F, I, G>(
 where
     S: fmt::Debug + PartialEq + Eq + Hash + Clone,
     F: Fn(&S) -> I,
-    I: Iterator<Item = (u64, S)>,
+    I: IntoIterator<Item = (u64, S)>,
     G: Fn(&S) -> bool,
 {
     let mut best_paths = Vec::new();

@@ -17,9 +17,9 @@ use state::ReindeerState;
 fn _part1_old(input: &PuzzleInput) -> Option<u64> {
     let start_state = ReindeerState::new(input.start_position, Direction::East);
 
-    let successors = |state: &ReindeerState| {
+    let successors = |state: &ReindeerState| -> SmallVec<[_; 3]> {
         let moved_forward = state.moved_forward_one();
-        let result: SmallVec<[_; 3]> = if input.grid[moved_forward.position()] == GridCell::Empty {
+        if input.grid[moved_forward.position()] == GridCell::Empty {
             smallvec![
                 (1, moved_forward),
                 (1000, state.turned_ccw()),
@@ -27,8 +27,7 @@ fn _part1_old(input: &PuzzleInput) -> Option<u64> {
             ]
         } else {
             smallvec![(1000, state.turned_ccw()), (1000, state.turned_cw())]
-        };
-        result.into_iter()
+        }
     };
 
     let is_goal = |state: &ReindeerState| state.position() == input.end_position;
@@ -77,7 +76,7 @@ fn part1(input: &PuzzleInput) -> Option<u64> {
             result.push((1001, turned_cw_and_forward));
         }
 
-        result.into_iter()
+        result
     };
 
     let is_goal = |state: &ReindeerState| state.position() == input.end_position;
@@ -133,7 +132,7 @@ fn part2(input: &PuzzleInput) -> Option<usize> {
             result.push((1001, turned_cw_and_forward));
         }
 
-        result.into_iter()
+        result
     };
 
     let is_goal = |state: &ReindeerState| state.position() == input.end_position;
