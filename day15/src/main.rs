@@ -61,29 +61,24 @@ fn try_push_part2_north_south(
     box_position: (usize, usize),
     direction: Direction,
 ) -> bool {
-    // TODO: make seen a btreeset ordered by row. That way if we going north we can
-    // copy from north to south, and vice versa, and delete as we move. IE
-    // ..
-    // []
-    //
-    // become
-    // []
-    // ..
-    //
-    // BTreeSet ordered by row would allow me to iterate by row so basically pog.
     let mut seen = BTreeSet::new();
 
     if !can_push_part2_north_south(grid, box_position, direction, &mut seen) {
         return false;
     }
 
-    todo!();
-    // TODO check if we going north or south
-    // and reverse the iteration if one of them lol
-    for position in seen {
-        let to_move_to = move_once_in_direction(position, direction);
-        grid[to_move_to] = grid[position];
-        grid[position] = Part2Cell::Empty;
+    if matches!(direction, Direction::North) {
+        for position in seen.into_iter() {
+            let to_move_to = move_once_in_direction(position, direction);
+            grid[to_move_to] = grid[position];
+            grid[position] = Part2Cell::Empty;
+        }
+    } else {
+        for position in seen.into_iter().rev() {
+            let to_move_to = move_once_in_direction(position, direction);
+            grid[to_move_to] = grid[position];
+            grid[position] = Part2Cell::Empty;
+        }
     }
 
     true
@@ -95,7 +90,46 @@ fn can_push_part2_north_south(
     direction: Direction,
     seen: &mut BTreeSet<(usize, usize)>,
 ) -> bool {
-    todo!()
+    if seen.contains(&box_position) {
+        return true;
+    }
+
+    let direction_to_other_box_half = match grid[box_position] {
+        Part2Cell::LeftBox => Direction::East,
+        Part2Cell::RightBox => Direction::West,
+        _ => panic!(),
+    };
+
+    let other_box_position = move_once_in_direction(box_position, direction_to_other_box_half);
+
+    let next_box_position = move_once_in_direction(box_position, direction);
+
+    match grid[next_box_position] {
+        Part2Cell::Empty => (),
+        Part2Cell::Wall => return false,
+        Part2Cell::LeftBox | Part2Cell::RightBox => {
+            if !can_push_part2_north_south(grid, next_box_position, direction, seen) {
+                return false;
+            }
+        }
+    };
+
+    let next_other_box_position = move_once_in_direction(other_box_position, direction);
+
+    let result = match grid[next_other_box_position] {
+        Part2Cell::Empty => true,
+        Part2Cell::Wall => false,
+        Part2Cell::LeftBox | Part2Cell::RightBox => {
+            can_push_part2_north_south(grid, next_other_box_position, direction, seen)
+        }
+    };
+
+    if result {
+        seen.insert(box_position);
+        seen.insert(other_box_position);
+    }
+
+    result
 }
 
 fn try_push_part2_east_west(
@@ -154,7 +188,7 @@ fn move_and_push_part2(
         Part2Cell::Empty => *robot_position = next_robot_position,
         Part2Cell::Wall => (),
         Part2Cell::LeftBox | Part2Cell::RightBox => {
-            if try_push_part2(grid, *robot_position, direction) {
+            if try_push_part2(grid, next_robot_position, direction) {
                 *robot_position = next_robot_position;
             }
         }
@@ -181,11 +215,12 @@ fn part1(input: PuzzleInput) -> usize {
 fn part2(input: PuzzleInput) -> usize {
     let PuzzleInput {
         grid: part1_grid,
-        start_position: mut cur_position,
+        start_position,
         directions,
     } = input;
 
     let mut grid = to_part2_grid(&part1_grid);
+    let mut cur_position = (start_position.0, start_position.1 * 2);
 
     for direction in directions {
         move_and_push_part2(&mut grid, &mut cur_position, direction);
