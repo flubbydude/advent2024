@@ -14,7 +14,7 @@ use puzzle_input::PuzzleInput;
 use search::{best_cost_djikstra, best_paths};
 use state::ReindeerState;
 
-fn part1(input: &PuzzleInput) -> Option<u64> {
+fn _part1_old(input: &PuzzleInput) -> Option<u64> {
     let start_state = ReindeerState::new(input.start_position, Direction::East);
 
     let successors = |state: &ReindeerState| {
@@ -36,35 +36,111 @@ fn part1(input: &PuzzleInput) -> Option<u64> {
     best_cost_djikstra([(0, start_state)], successors, is_goal)
 }
 
-fn part2(input: &PuzzleInput) -> Option<usize> {
-    let start_state = ReindeerState::new(input.start_position, Direction::East);
+fn part1(input: &PuzzleInput) -> Option<u64> {
+    let start_states = [
+        (0, ReindeerState::new(input.start_position, Direction::East)),
+        (
+            1000,
+            ReindeerState::new(input.start_position, Direction::North),
+        ),
+        (
+            1000,
+            ReindeerState::new(input.start_position, Direction::South),
+        ),
+        (
+            2000,
+            ReindeerState::new(input.start_position, Direction::West),
+        ),
+    ]
+    .into_iter()
+    .filter(|(_, state)| input.grid[state.moved_forward_one().position()] == GridCell::Empty)
+    .collect::<SmallVec<[_; 4]>>();
 
-    // for part 2: note we need to move forward first
-    // to prune branches faster, since not using a prio queue
     let successors = |state: &ReindeerState| {
         let moved_forward = state.moved_forward_one();
-        let result: SmallVec<[_; 3]> = if input.grid[moved_forward.position()] == GridCell::Empty {
-            smallvec![
-                (1, moved_forward),
-                (1000, state.turned_ccw()),
-                (1000, state.turned_cw())
-            ]
-        } else {
-            smallvec![(1000, state.turned_ccw()), (1000, state.turned_cw())]
-        };
+
+        let mut result: SmallVec<[_; 3]> = SmallVec::new();
+
+        if input.grid[moved_forward.position()] == GridCell::Empty {
+            result.push((1, moved_forward));
+        }
+
+        let turned_ccw_and_forward = state.turned_ccw().moved_forward_one();
+
+        if input.grid[turned_ccw_and_forward.position()] == GridCell::Empty {
+            result.push((1001, turned_ccw_and_forward));
+        }
+
+        let turned_cw_and_forward = state.turned_cw().moved_forward_one();
+
+        if input.grid[turned_cw_and_forward.position()] == GridCell::Empty {
+            result.push((1001, turned_cw_and_forward));
+        }
+
         result.into_iter()
     };
 
     let is_goal = |state: &ReindeerState| state.position() == input.end_position;
 
-    let best_path_cost = best_cost_djikstra([(0, start_state.clone())], successors, is_goal)?;
+    best_cost_djikstra(start_states.clone(), successors, is_goal)
+}
 
-    let best_paths = best_paths(
-        [(0, start_state.clone())],
-        successors,
-        is_goal,
-        best_path_cost,
-    );
+fn part2(input: &PuzzleInput) -> Option<usize> {
+    let start_states = [
+        (0, ReindeerState::new(input.start_position, Direction::East)),
+        (
+            1000,
+            ReindeerState::new(input.start_position, Direction::North),
+        ),
+        (
+            1000,
+            ReindeerState::new(input.start_position, Direction::South),
+        ),
+        (
+            2000,
+            ReindeerState::new(input.start_position, Direction::West),
+        ),
+    ]
+    .into_iter()
+    .filter(|(_, state)| input.grid[state.moved_forward_one().position()] == GridCell::Empty)
+    .collect::<SmallVec<[_; 4]>>();
+
+    // for part 2: note we need to move forward first
+    // to prune branches faster, since not using a prio queue.
+    // also only turn if can turn and then immediately move forward.
+    // This only works if the start states are created good
+    // and the maze has no open areas with width more than 1.
+    // And to make it work well the start states should be created really well
+    // so we don't have to do repeat work.
+    let successors = |state: &ReindeerState| {
+        let moved_forward = state.moved_forward_one();
+
+        let mut result: SmallVec<[_; 3]> = SmallVec::new();
+
+        if input.grid[moved_forward.position()] == GridCell::Empty {
+            result.push((1, moved_forward));
+        }
+
+        let turned_ccw_and_forward = state.turned_ccw().moved_forward_one();
+
+        if input.grid[turned_ccw_and_forward.position()] == GridCell::Empty {
+            result.push((1001, turned_ccw_and_forward));
+        }
+
+        let turned_cw_and_forward = state.turned_cw().moved_forward_one();
+
+        if input.grid[turned_cw_and_forward.position()] == GridCell::Empty {
+            result.push((1001, turned_cw_and_forward));
+        }
+
+        result.into_iter()
+    };
+
+    let is_goal = |state: &ReindeerState| state.position() == input.end_position;
+
+    let best_path_cost = best_cost_djikstra(start_states.clone(), successors, is_goal)?;
+
+    let best_paths = best_paths(start_states, successors, is_goal, best_path_cost);
 
     best_paths
         .into_iter()
