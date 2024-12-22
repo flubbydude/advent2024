@@ -5,4 +5,5 @@ edition = "2021"
 
 [dependencies]
 array2d = "0.3.2"
+itertools = "0.13.0"
 test-case = "3.3.1"

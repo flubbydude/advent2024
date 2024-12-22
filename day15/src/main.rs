@@ -3,9 +3,11 @@ mod part1_cell;
 mod part2_cell;
 mod puzzle_input;
 
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 use array2d::Array2D;
+use itertools::Itertools;
+
 use direction::Direction;
 use part1_cell::Part1Cell;
 use part2_cell::{to_part2_grid, Part2Cell};
@@ -58,7 +60,40 @@ fn try_push_part2_north_south(
     grid: &mut Array2D<Part2Cell>,
     box_position: (usize, usize),
     direction: Direction,
-    seen: &mut HashSet<(usize, usize)>,
+) -> bool {
+    // TODO: make seen a btreeset ordered by row. That way if we going north we can
+    // copy from north to south, and vice versa, and delete as we move. IE
+    // ..
+    // []
+    //
+    // become
+    // []
+    // ..
+    //
+    // BTreeSet ordered by row would allow me to iterate by row so basically pog.
+    let mut seen = BTreeSet::new();
+
+    if !can_push_part2_north_south(grid, box_position, direction, &mut seen) {
+        return false;
+    }
+
+    todo!();
+    // TODO check if we going north or south
+    // and reverse the iteration if one of them lol
+    for position in seen {
+        let to_move_to = move_once_in_direction(position, direction);
+        grid[to_move_to] = grid[position];
+        grid[position] = Part2Cell::Empty;
+    }
+
+    true
+}
+
+fn can_push_part2_north_south(
+    grid: &mut Array2D<Part2Cell>,
+    box_position: (usize, usize),
+    direction: Direction,
+    seen: &mut BTreeSet<(usize, usize)>,
 ) -> bool {
     todo!()
 }
@@ -68,7 +103,30 @@ fn try_push_part2_east_west(
     box_position: (usize, usize),
     direction: Direction,
 ) -> bool {
-    todo!()
+    let mut next_box_position = move_once_in_direction(box_position, direction);
+    loop {
+        match grid[next_box_position] {
+            Part2Cell::Empty => break,
+            Part2Cell::Wall => return false,
+            Part2Cell::LeftBox | Part2Cell::RightBox => {
+                next_box_position = move_once_in_direction(next_box_position, direction)
+            }
+        }
+    }
+
+    if next_box_position.1 > box_position.1 {
+        for (cur_col, prev_col) in (box_position.1..=next_box_position.1).rev().tuple_windows() {
+            grid[(box_position.0, cur_col)] = grid[(box_position.0, prev_col)];
+        }
+    } else {
+        for (cur_col, prev_col) in (next_box_position.1..=box_position.1).tuple_windows() {
+            grid[(box_position.0, cur_col)] = grid[(box_position.0, prev_col)];
+        }
+    };
+
+    grid[box_position] = Part2Cell::Empty;
+
+    true
 }
 
 fn try_push_part2(
@@ -78,7 +136,7 @@ fn try_push_part2(
 ) -> bool {
     match direction {
         Direction::North | Direction::South => {
-            try_push_part2_north_south(grid, box_position, direction, &mut HashSet::new())
+            try_push_part2_north_south(grid, box_position, direction)
         }
         Direction::East | Direction::West => {
             try_push_part2_east_west(grid, box_position, direction)

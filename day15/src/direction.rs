@@ -19,3 +19,25 @@ impl TryFrom<char> for Direction {
         }
     }
 }
+
+impl Direction {
+    pub fn turn_ccw(&self) -> Direction {
+        use Direction::*;
+        match *self {
+            North => West,
+            East => North,
+            South => East,
+            West => South,
+        }
+    }
+
+    pub fn turn_cw(&self) -> Direction {
+        use Direction::*;
+        match *self {
+            North => East,
+            East => South,
+            South => West,
+            West => North,
+        }
+    }
+}
