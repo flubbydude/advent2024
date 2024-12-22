@@ -7,7 +7,6 @@ use std::{
 
 #[derive(PartialEq, Eq)]
 struct PriorityQueueItem<S: Eq> {
-    priority: u64,
     cost: u64,
     state: S,
 }
@@ -20,28 +19,26 @@ impl<S: Eq> PartialOrd for PriorityQueueItem<S> {
 
 impl<S: Eq> Ord for PriorityQueueItem<S> {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.priority.cmp(&other.priority).reverse()
+        self.cost.cmp(&other.cost).reverse()
     }
 }
 
-pub fn best_cost_a_star<S, F, I, G, H>(
-    start_state: S,
+pub fn best_cost_djikstra<S, F, I, G>(
+    start_states: impl IntoIterator<Item = (u64, S)>,
     successors: F,
     is_goal: G,
-    heuristic: H,
 ) -> Option<u64>
 where
     S: fmt::Debug + PartialEq + Eq + Hash + Clone,
     F: Fn(&S) -> I,
     I: Iterator<Item = (u64, S)>,
     G: Fn(&S) -> bool,
-    H: Fn(&S) -> u64,
 {
-    let mut frontier = BinaryHeap::from([PriorityQueueItem {
-        priority: 0,
-        cost: 0,
-        state: start_state.clone(),
-    }]);
+    let mut frontier = BinaryHeap::from_iter(
+        start_states
+            .into_iter()
+            .map(|(cost, state)| PriorityQueueItem { cost, state }),
+    );
     let mut seen: HashSet<S> = HashSet::new();
     let mut costs: HashMap<S, u64> = HashMap::new();
 
@@ -73,7 +70,6 @@ where
             }
 
             frontier.push(PriorityQueueItem {
-                priority: new_cost + heuristic(&successor),
                 cost: new_cost,
                 state: successor,
             });
@@ -90,8 +86,8 @@ where
     I: Iterator<Item = (u64, S)>,
     G: Fn(&S) -> bool,
 {
-    successors: F,
-    is_goal: G,
+    successors: &'a F,
+    is_goal: &'a G,
     best_path_cost: u64,
     open_set: &'a mut Vec<S>,
     min_cost_seen: &'a mut HashMap<S, u64>,
@@ -142,7 +138,7 @@ where
 }
 
 pub fn best_paths<S, F, I, G>(
-    start_state: S,
+    start_states: impl IntoIterator<Item = (u64, S)>,
     successors: F,
     is_goal: G,
     best_path_cost: u64,
@@ -154,20 +150,22 @@ where
     G: Fn(&S) -> bool,
 {
     let mut best_paths = Vec::new();
+    let mut min_cost_seen = HashMap::new();
 
-    // use cost-limited DFS to find all paths
-    best_paths_helper(
-        start_state,
-        0,
-        &mut BestPathsHelperEnv {
-            successors,
-            is_goal,
-            best_path_cost,
-            open_set: &mut Vec::new(),
-            min_cost_seen: &mut HashMap::new(),
-            best_paths: &mut best_paths,
-        },
-    );
+    for (cost, start_state) in start_states {
+        best_paths_helper(
+            start_state,
+            cost,
+            &mut BestPathsHelperEnv {
+                successors: &successors,
+                is_goal: &is_goal,
+                best_path_cost,
+                open_set: &mut Vec::new(),
+                min_cost_seen: &mut min_cost_seen,
+                best_paths: &mut best_paths,
+            },
+        );
+    }
 
     best_paths
 }
