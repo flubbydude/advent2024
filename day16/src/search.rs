@@ -6,7 +6,7 @@ use std::{
 };
 
 #[derive(PartialEq, Eq)]
-struct PriorityQueueItem<S: Eq> {
+struct PriorityQueueItem<S> {
     cost: u64,
     state: S,
 }
