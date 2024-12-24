@@ -1,0 +1,40 @@
+Program: 2,4,1,5,7,5,0,3,4,0,1,6,5,5,3,0
+
+
+start:
+2,4, b = a
+1,5, b = b ^ 5
+7,5, c = a >> b
+0,3, a = a >> 3
+4,0, b = b ^ c
+1,6, b = b ^ 6
+5,5, output b % 8
+3,0  if a != 0 jump to start else end
+
+// todo 1: rewrite part 1 to do this for my answer and check its the same for the real input using part2_test func, for a range of value like up to 100
+// todo 2: reverse engineer the following code to output what the original a value should be. Somehow. I believe it's possible due to XOR
+//     and you can test it and stuff.
+// Then run part 2 using part 2 as its own input, to get the solution.
+
+while a > 0 {
+    b = a;
+
+    b ^= 0b101;
+    b ^= (a >> b);
+    b ^= 0b110;
+
+    println(b % 8)
+
+    a /= 8;
+}
+
+
+
+while a > 0 {
+    // assume for now a > 8
+    // until the last elem. I'll figure it out later.
+
+    println((a % 8) ^ 0b011)
+
+    a /= 8;
+}
