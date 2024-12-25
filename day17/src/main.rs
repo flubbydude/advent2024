@@ -40,7 +40,7 @@ fn part1_decompiled(input: &PuzzleInput) -> String {
     .join(",")
 }
 
-fn part2_helper(next_a: u64, b3: u8, b1: u8, rest: &[u8]) -> Option<u64> {
+fn part2_helper(next_a: u64, b3: u8, b1: u8, prev_output: &[u8]) -> Option<u64> {
     let b2 = b3 ^ 6;
     let b0 = b1 ^ 5;
 
@@ -51,20 +51,20 @@ fn part2_helper(next_a: u64, b3: u8, b1: u8, rest: &[u8]) -> Option<u64> {
         return None;
     }
 
-    let Some((&prev_b3, prev_rest)) = rest.split_last() else {
+    let Some((&prev_b3, prev_prev_output)) = prev_output.split_last() else {
         return Some(a);
     };
 
     (0..8)
-        .flat_map(|prev_b1| part2_helper(a, prev_b3, prev_b1, prev_rest))
+        .flat_map(|prev_b1| part2_helper(a, prev_b3, prev_b1, prev_prev_output))
         .min()
 }
 
 fn part2(input: &PuzzleInput) -> u64 {
-    let (&b3, rest) = input.tribit_code.split_last().unwrap();
+    let (&b3, prev_output) = input.tribit_code.split_last().unwrap();
 
     (0..8)
-        .flat_map(|maybe_b1| part2_helper(0, b3, maybe_b1, rest))
+        .flat_map(|maybe_b1| part2_helper(0, b3, maybe_b1, prev_output))
         .min()
         .unwrap()
 }
