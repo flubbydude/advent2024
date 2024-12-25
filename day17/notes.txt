@@ -2,7 +2,7 @@ Program: 2,4,1,5,7,5,0,3,4,0,1,6,5,5,3,0
 
 
 start:
-2,4, b = a
+2,4, b = a % 8
 1,5, b = b ^ 5
 7,5, c = a >> b
 0,3, a = a >> 3
@@ -11,30 +11,70 @@ start:
 5,5, output b % 8
 3,0  if a != 0 jump to start else end
 
+loop {
+
+    let mut b = a % 8;
+    b = b ^ 5;
+    let c = a >> b;
+    b = b ^ () ^ 6;
+
+    a /= 8;
+    if a == 0 { break; }
+}
+
 // todo 1: rewrite part 1 to do this for my answer and check its the same for the real input using part2_test func, for a range of value like up to 100
 // todo 2: reverse engineer the following code to output what the original a value should be. Somehow. I believe it's possible due to XOR
 //     and you can test it and stuff.
 // Then run part 2 using part 2 as its own input, to get the solution.
 
-while a > 0 {
-    b = a;
+fn part1_decompiled(input: &PuzzleInput) -> String {
+    let mut a = input.memory.registers.a;
+    if a == 0 {
+        return "0".to_string();
+    }
 
-    b ^= 0b101;
-    b ^= (a >> b);
-    b ^= 0b110;
+    iter::from_fn(|| {
+        if a == 0 {
+            return None;
+        }
 
-    println(b % 8)
+        let mut b = (a % 8) as u8;
+        b ^= 5;
 
-    a /= 8;
+        let c = a.checked_shr(b as u32).unwrap_or_default();
+
+        b ^= (c % 8) as u8;
+        b ^= 6;
+
+        a >>= 3;
+
+        Some(b)
+    })
+    .join(",")
 }
 
+fn part1_decompiled(input: &PuzzleInput) -> String {
+    let mut a = input.memory.registers.a;
+    if a == 0 {
+        return "0".to_string();
+    }
 
+    iter::from_fn(|| {
+        if a == 0 {
+            return None;
+        }
 
-while a > 0 {
-    // assume for now a > 8
-    // until the last elem. I'll figure it out later.
+        let mut b = (a % 8) as u8;
+        b ^= 5;
 
-    println((a % 8) ^ 0b011)
+        let c = a.checked_shr(b as u32).unwrap_or_default();
 
-    a /= 8;
+        b ^= (c % 8) as u8;
+        b ^= 6;
+
+        a >>= 3;
+
+        Some(b)
+    })
+    .join(",")
 }

@@ -1,0 +1,24 @@
+Register A: 2024
+Register B: 0
+Register C: 0
+
+Program: 0,3,5,4,3,0
+
+loop {
+    a >>= 3
+    print(a % 8);
+    if a == 0 {
+        break;
+    }
+}
+
+=> soln is
+
+fn part2_example() {
+    a = 0
+    for &tribit in tribit_code.iter().rev() {
+        a |= tribit;
+        a <<= 3;
+    }
+    a
+}
