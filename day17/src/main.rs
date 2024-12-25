@@ -40,33 +40,39 @@ fn part1_decompiled(input: &PuzzleInput) -> String {
     .join(",")
 }
 
-fn check_part2(input: &PuzzleInput, answer: u64) {
-    let mut program_memory = input.memory.clone();
-    program_memory.registers.a = answer;
+fn part2_helper(next_a: u64, b3: u8, b1: u8, rest: &[u8]) -> Option<u64> {
+    let b2 = b3 ^ 6;
+    let b0 = b1 ^ 5;
 
-    let output = run_program(&input.tribit_code, program_memory)
-        .into_iter()
-        .collect::<Vec<_>>();
-    assert_eq!(*input.tribit_code, *output);
+    let a = (next_a << 3) | b0 as u64;
+
+    let c = a.checked_shr(b1 as u32).unwrap_or_default() % 8;
+    if b2 ^ (c % 8) as u8 != b1 {
+        return None;
+    }
+
+    let Some((&prev_b3, prev_rest)) = rest.split_last() else {
+        return Some(a);
+    };
+
+    (0..8)
+        .flat_map(|prev_b1| part2_helper(a, prev_b3, prev_b1, prev_rest))
+        .min()
 }
 
 fn part2(input: &PuzzleInput) -> u64 {
-    let mut a = 0;
-    for &tribit in input.tribit_code.iter().rev() {
-        let b0 = tribit ^ 6;
+    let (&b3, rest) = input.tribit_code.split_last().unwrap();
 
-        a |= b0 as u64;
-        a *= 8;
-    }
-    let answer = a;
-    check_part2(input, answer);
-    answer
+    (0..8)
+        .flat_map(|maybe_b1| part2_helper(0, b3, maybe_b1, rest))
+        .min()
+        .unwrap()
 }
 
-fn main() {
-    let input_str = include_str!("../input.txt");
+const INPUT: &str = include_str!("../input.txt");
 
-    let input = PuzzleInput::parse_input(input_str);
+fn main() {
+    let input = PuzzleInput::parse_input(INPUT);
 
     println!("{}", part1(&input));
     println!("{}", part1_decompiled(&input));
@@ -87,7 +93,7 @@ mod tests {
     }
 
     #[test]
-    fn part2_example() {
+    fn test_part2_example() {
         const PART2_EXAMPLE_SOLN: u64 = 117440;
 
         let input = PuzzleInput::parse_input(TEST_INPUT_PART2);
@@ -97,6 +103,23 @@ mod tests {
             a <<= 3;
         }
         assert_eq!(a, PART2_EXAMPLE_SOLN);
-        check_part2(&input, PART2_EXAMPLE_SOLN);
+        assert!(check_part2(&input, PART2_EXAMPLE_SOLN));
+    }
+
+    fn check_part2(input: &PuzzleInput, answer: u64) -> bool {
+        let mut program_memory = input.memory.clone();
+        program_memory.registers.a = answer;
+
+        let output = run_program(&input.tribit_code, program_memory)
+            .into_iter()
+            .collect::<Vec<_>>();
+        *input.tribit_code == *output
+    }
+
+    #[test]
+    fn test_part2() {
+        let input = PuzzleInput::parse_input(INPUT);
+        let part2_solution = part2(&input);
+        assert!(check_part2(&input, part2_solution));
     }
 }
