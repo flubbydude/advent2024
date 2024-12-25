@@ -19,9 +19,9 @@ impl From<u8> for ComboOperand {
 
 impl ComboOperand {
     pub fn to_value(&self, program_memory: &Memory) -> u64 {
-        match self {
-            &ComboOperand::Value(value) => value as u64,
-            &ComboOperand::Register(register) => program_memory.registers[register],
+        match *self {
+            ComboOperand::Value(value) => value as u64,
+            ComboOperand::Register(register) => program_memory.registers[register],
         }
     }
 }
