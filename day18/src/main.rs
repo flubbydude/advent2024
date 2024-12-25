@@ -59,9 +59,9 @@ fn part2(
     num_columns: usize,
 ) -> Option<(usize, usize)> {
     let pp = (0..coordinates.len()).partition_point(|&i| {
-        part1(coordinates.iter().copied(), num_rows, num_columns, i).is_none()
+        part1(coordinates.iter().copied(), num_rows, num_columns, i + 1).is_some()
     });
-    coordinates.get(pp.checked_sub(1).unwrap()).cloned()
+    coordinates.get(pp).cloned()
 }
 
 fn main() {
