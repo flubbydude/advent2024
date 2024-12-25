@@ -25,17 +25,17 @@ fn part1_decompiled(input: &PuzzleInput) -> String {
             return None;
         }
 
-        let mut b = (a % 8) as u8;
-        b ^= 5;
+        let b0 = (a % 8) as u8;
+        let b1 = b0 ^ 5;
 
-        let c = a.checked_shr(b as u32).unwrap_or_default();
+        let c = a.checked_shr(b1 as u32).unwrap_or_default();
 
         a >>= 3;
 
-        b ^= (c % 8) as u8;
-        b ^= 6;
+        let b2 = b1 ^ (c % 8) as u8;
+        let b3 = b2 ^ 6;
 
-        Some(b)
+        Some(b3)
     })
     .join(",")
 }
@@ -53,7 +53,7 @@ fn check_part2(input: &PuzzleInput, answer: u64) {
 fn part2(input: &PuzzleInput) -> u64 {
     let mut a = 0;
     for &tribit in input.tribit_code.iter().rev() {
-        let b0 = tribit ^ 0b110 ^ 0b101;
+        let b0 = tribit ^ 6;
 
         a |= b0 as u64;
         a *= 8;
