@@ -87,12 +87,6 @@ mod tests {
     }
 
     #[test]
-    fn test_part1_decompiled() {
-        let input = PuzzleInput::parse_input(TEST_INPUT);
-        assert_eq!("4,6,3,5,6,3,5,2,1,0", part1_decompiled(&input))
-    }
-
-    #[test]
     fn part2_example() {
         const PART2_EXAMPLE_SOLN: u64 = 117440;
 
