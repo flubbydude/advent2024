@@ -1,10 +1,12 @@
+mod a_star;
+mod binary_search;
 mod grid_cell;
-mod search;
 
 use array2d::Array2D;
 
+use a_star::best_cost_a_star;
+use binary_search::BinarySearchExt;
 use grid_cell::GridCell;
-use search::best_cost_a_star;
 
 fn parse_coordinates(value: &str) -> (usize, usize) {
     let (i_str, j_str) = value.split_once(',').unwrap();
@@ -13,9 +15,9 @@ fn parse_coordinates(value: &str) -> (usize, usize) {
 
 fn part1(
     byte_coordinates: impl IntoIterator<Item = (usize, usize)>,
-    num_bytes_to_fall: usize,
     num_rows: usize,
     num_columns: usize,
+    num_bytes_to_fall: usize,
 ) -> Option<u64> {
     let mut grid = Array2D::filled_with(GridCell::Safe, num_rows, num_columns);
 
@@ -51,18 +53,36 @@ fn part1(
     best_cost_a_star(start_states, successors, is_goal, heuristic)
 }
 
-fn main() {
-    let input_str = include_str!("../input.txt");
-    let num_rows = 71;
-    let num_columns = 71;
-    let num_bytes_to_fall = 1024;
+fn part2(
+    coordinates: &[(usize, usize)],
+    num_rows: usize,
+    num_columns: usize,
+) -> Option<(usize, usize)> {
+    let pp = (0..coordinates.len()).partition_point(|&i| {
+        part1(coordinates.iter().copied(), num_rows, num_columns, i).is_none()
+    });
+    coordinates.get(pp.checked_sub(1).unwrap()).cloned()
+}
 
-    let coordinates_iter = input_str.lines().map(parse_coordinates);
+fn main() {
+    const INPUT: &str = include_str!("../input.txt");
+    const NUM_ROWS: usize = 71;
+    const NUM_COLUMNS: usize = 71;
+    const NUM_BYTES_TO_FALL_PART1: usize = 1024;
 
     println!(
         "{:?}",
-        part1(coordinates_iter, num_bytes_to_fall, num_rows, num_columns,)
+        part1(
+            INPUT.lines().map(parse_coordinates),
+            NUM_ROWS,
+            NUM_COLUMNS,
+            NUM_BYTES_TO_FALL_PART1,
+        )
     );
+
+    let coordinates = INPUT.lines().map(parse_coordinates).collect::<Vec<_>>();
+
+    println!("{:?}", part2(&coordinates, NUM_ROWS, NUM_COLUMNS));
 }
 
 #[cfg(test)]
@@ -70,17 +90,35 @@ mod tests {
     use super::*;
 
     const TEST_INPUT: &str = include_str!("../example.txt");
+    const TEST_NUM_ROWS: usize = 7;
+    const TEST_NUM_COLUMNS: usize = 7;
+    const TEST_NUM_BYTES_TO_FALL: usize = 12;
 
     #[test]
     fn test_part1() {
         let coordinates_iter = TEST_INPUT.lines().map(parse_coordinates);
-        let num_rows = 7;
-        let num_columns = 7;
-        let num_bytes_to_fall = 12;
 
         assert_eq!(
-            part1(coordinates_iter, num_bytes_to_fall, num_rows, num_columns),
+            part1(
+                coordinates_iter,
+                TEST_NUM_ROWS,
+                TEST_NUM_COLUMNS,
+                TEST_NUM_BYTES_TO_FALL
+            ),
             Some(22)
+        );
+    }
+
+    #[test]
+    fn test_part2() {
+        let coordinates = TEST_INPUT
+            .lines()
+            .map(parse_coordinates)
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            Some((6, 1)),
+            part2(&coordinates, TEST_NUM_ROWS, TEST_NUM_COLUMNS)
         );
     }
 }
