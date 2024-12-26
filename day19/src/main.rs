@@ -32,11 +32,10 @@ fn num_ways_to_make_design<'a>(
         towels
             .iter()
             .map(|&towel| {
-                if let Some(rest) = design.strip_prefix(towel) {
-                    num_ways_to_make_design(towels, rest, memoization)
-                } else {
-                    0
-                }
+                design
+                    .strip_prefix(towel)
+                    .map(|rest| num_ways_to_make_design(towels, rest, memoization))
+                    .unwrap_or(0)
             })
             .sum()
     };
@@ -59,11 +58,10 @@ fn is_design_possible<'a>(
         true
     } else {
         towels.iter().any(|&towel| {
-            if let Some(rest) = design.strip_prefix(towel) {
-                is_design_possible(towels, rest, memoization)
-            } else {
-                false
-            }
+            design
+                .strip_prefix(towel)
+                .map(|rest| is_design_possible(towels, rest, memoization))
+                .unwrap_or(false)
         })
     };
 
