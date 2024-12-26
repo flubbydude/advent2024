@@ -17,7 +17,36 @@ fn parse_input(input_str: &str) -> (Vec<&[u8]>, Vec<&[u8]>) {
     (towels, designs)
 }
 
-fn is_possible_part1<'a>(
+fn num_ways_to_make_design<'a>(
+    towels: &[&[u8]],
+    design: &'a [u8],
+    memoization: &mut HashMap<&'a [u8], usize>,
+) -> usize {
+    if let Some(&num_ways) = memoization.get(design) {
+        return num_ways;
+    };
+
+    let result = if design.is_empty() {
+        1
+    } else {
+        towels
+            .iter()
+            .map(|&towel| {
+                if let Some(rest) = design.strip_prefix(towel) {
+                    num_ways_to_make_design(towels, rest, memoization)
+                } else {
+                    0
+                }
+            })
+            .sum()
+    };
+
+    memoization.insert(design, result);
+
+    result
+}
+
+fn is_design_possible<'a>(
     towels: &[&[u8]],
     design: &'a [u8],
     memoization: &mut HashMap<&'a [u8], bool>,
@@ -31,7 +60,7 @@ fn is_possible_part1<'a>(
     } else {
         towels.iter().any(|&towel| {
             if let Some(rest) = design.strip_prefix(towel) {
-                is_possible_part1(towels, rest, memoization)
+                is_design_possible(towels, rest, memoization)
             } else {
                 false
             }
@@ -39,7 +68,6 @@ fn is_possible_part1<'a>(
     };
 
     memoization.insert(design, result);
-
     result
 }
 
@@ -48,8 +76,17 @@ fn part1(towels: &[&[u8]], designs: &[&[u8]]) -> usize {
 
     designs
         .iter()
-        .filter(|&design| is_possible_part1(towels, design, &mut memoization))
+        .filter(|&design| is_design_possible(towels, design, &mut memoization))
         .count()
+}
+
+fn part2(towels: &[&[u8]], designs: &[&[u8]]) -> usize {
+    let mut memoization: HashMap<&[u8], usize> = HashMap::new();
+
+    designs
+        .iter()
+        .map(|design| num_ways_to_make_design(towels, design, &mut memoization))
+        .sum()
 }
 
 fn main() {
@@ -58,6 +95,7 @@ fn main() {
     let (towels, designs) = parse_input(INPUT_STR);
 
     println!("{}", part1(&towels, &designs));
+    println!("{}", part2(&towels, &designs));
 }
 
 #[cfg(test)]
@@ -78,5 +116,12 @@ mod tests {
         let (towels, designs) = parse_input(INPUT_STR);
 
         assert_eq!(part1(&towels, &designs), 6);
+    }
+
+    #[test]
+    fn test_part2() {
+        let (towels, designs) = parse_input(INPUT_STR);
+
+        assert_eq!(part2(&towels, &designs), 16);
     }
 }
