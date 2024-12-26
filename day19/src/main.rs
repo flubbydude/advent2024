@@ -1,46 +1,26 @@
-mod color;
-mod towel;
-
 use std::collections::HashMap;
 
-use color::Color;
-use towel::Towel;
-
-fn parse_input(input_str: &str) -> (Vec<Towel>, Vec<Box<[Color]>>) {
+fn parse_input(input_str: &str) -> (Vec<&[u8]>, Vec<&[u8]>) {
     let mut lines = input_str.lines();
 
     let towels = lines
         .next()
         .unwrap()
         .split(", ")
-        .map(|towel_pattern_str| {
-            towel_pattern_str
-                .as_bytes()
-                .iter()
-                .map(|&c| Color::try_from(c).unwrap())
-                .collect::<Towel>()
-        })
+        .map(str::as_bytes)
         .collect();
 
     lines.next();
 
-    let designs = lines
-        .map(|line| {
-            line.as_bytes()
-                .iter()
-                .map(|&c| Color::try_from(c).unwrap())
-                .collect::<Vec<_>>()
-                .into_boxed_slice()
-        })
-        .collect();
+    let designs = lines.map(str::as_bytes).collect();
 
     (towels, designs)
 }
 
 fn is_possible_part1<'a>(
-    towels: &[Towel],
-    design: &'a [Color],
-    memoization: &mut HashMap<&'a [Color], bool>,
+    towels: &[&[u8]],
+    design: &'a [u8],
+    memoization: &mut HashMap<&'a [u8], bool>,
 ) -> bool {
     if let Some(&is_possible) = memoization.get(design) {
         return is_possible;
@@ -49,8 +29,8 @@ fn is_possible_part1<'a>(
     let result = if design.is_empty() {
         true
     } else {
-        towels.iter().any(|towel| {
-            if let Some(rest) = design.strip_prefix(towel.pattern()) {
+        towels.iter().any(|&towel| {
+            if let Some(rest) = design.strip_prefix(towel) {
                 is_possible_part1(towels, rest, memoization)
             } else {
                 false
@@ -63,8 +43,8 @@ fn is_possible_part1<'a>(
     result
 }
 
-fn part1(towels: &[Towel], designs: &[Box<[Color]>]) -> usize {
-    let mut memoization: HashMap<&[Color], bool> = HashMap::new();
+fn part1(towels: &[&[u8]], designs: &[&[u8]]) -> usize {
+    let mut memoization: HashMap<&[u8], bool> = HashMap::new();
 
     designs
         .iter()
