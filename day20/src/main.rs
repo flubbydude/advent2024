@@ -13,6 +13,9 @@ use enum_iterator::all;
 // At least come back and do my own impl of KdTree which doesn't have
 // doodoo code in it
 // due to Dim type requirement in KdPoint, this library is but cheeks
+// TODO: also can implement getting all 20 points nearby to a point,
+// AND/OR a sliding window (with a 2d sliding window).
+// sliding window would be tough when handling numbers outside of the bounds
 use kd_tree::{KdPoint, KdTree};
 
 use direction::Direction;
