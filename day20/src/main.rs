@@ -12,7 +12,8 @@ use enum_iterator::all;
 // Need to look into it more. Maybe can redo day 20 and 17 after.
 // At least come back and do my own impl of KdTree which doesn't have
 // doodoo code in it
-use kd_tree::KdTree;
+// due to Dim type requirement in KdPoint, this library is but cheeks
+use kd_tree::{KdPoint, KdTree};
 
 use direction::Direction;
 use grid_cell::GridCell;
@@ -136,40 +137,51 @@ fn part2(puzzle_input: &PuzzleInput, steps_to_save: usize) -> usize {
 
     let distance_grid = &get_distance_grid(puzzle_input);
 
+    struct Item((usize, usize));
+
+    impl KdPoint for Item {
+        type Scalar = usize;
+        type Dim = typenum::U2;
+
+        fn at(&self, i: usize) -> Self::Scalar {
+            match i {
+                0 => self.0 .0,
+                1 => self.0 .1,
+                _ => panic!(),
+            }
+        }
+    }
+
     let kdpoints = distance_grid
         .enumerate_row_major()
-        .filter_map(|((i, j), maybe_dist)| maybe_dist.map(|_| [i, j]))
+        .filter_map(|(position, maybe_dist)| maybe_dist.map(|_| Item(position)))
         .collect::<Vec<_>>();
 
     let kd_tree = KdTree::build(kdpoints);
 
     kd_tree
         .iter()
-        .flat_map(|arr_before_cheat| {
-            let &[i, j] = arr_before_cheat;
-            let position_before_cheat = (i, j);
-            let dist_before_cheat = distance_grid[position_before_cheat].unwrap();
+        .flat_map(|item_before_cheat| {
+            let dist_before_cheat = distance_grid[item_before_cheat.0].unwrap();
             kd_tree
                 .within_by_cmp(|maybe_arr_after_cheat, k| {
-                    if maybe_arr_after_cheat[k] + RADIUS < arr_before_cheat[k] {
+                    if maybe_arr_after_cheat.at(k) + RADIUS < item_before_cheat.at(k) {
                         Ordering::Less
-                    } else if maybe_arr_after_cheat[k] > arr_before_cheat[k] + RADIUS {
+                    } else if maybe_arr_after_cheat.at(k) > item_before_cheat.at(k) + RADIUS {
                         Ordering::Greater
                     } else {
                         Ordering::Equal
                     }
                 })
                 .into_iter()
-                .filter(move |&arr_after_cheat| {
-                    let cheat_dist = arr_after_cheat[0].abs_diff(arr_before_cheat[0])
-                        + arr_after_cheat[1].abs_diff(arr_before_cheat[1]);
+                .filter(move |&&Item(position_after_cheat)| {
+                    let cheat_dist = position_after_cheat.0.abs_diff(item_before_cheat.0 .0)
+                        + position_after_cheat.1.abs_diff(item_before_cheat.0 .1);
 
                     if cheat_dist > RADIUS {
                         return false;
                     }
 
-                    let &[i2, j2] = arr_after_cheat;
-                    let position_after_cheat = (i2, j2);
                     let dist_after_cheat = distance_grid[position_after_cheat].unwrap();
                     dist_after_cheat >= dist_before_cheat + steps_to_save + cheat_dist
                 })
