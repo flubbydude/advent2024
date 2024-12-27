@@ -127,13 +127,18 @@ fn part1(puzzle_input: &PuzzleInput, steps_to_save: usize) -> usize {
         .count()
 }
 
+fn part2(puzzle_input: &PuzzleInput, steps_to_save: usize) -> usize {
+    todo!()
+}
+
 fn main() {
     const INPUT_STR: &str = include_str!("../input.txt");
-    const STEPS_TO_SAVE_PART1: usize = 100;
+    const STEPS_TO_SAVE: usize = 100;
 
     let puzzle_input = PuzzleInput::from_input(INPUT_STR);
 
-    println!("{}", part1(&puzzle_input, STEPS_TO_SAVE_PART1));
+    println!("{}", part1(&puzzle_input, STEPS_TO_SAVE));
+    println!("{}", part2(&puzzle_input, STEPS_TO_SAVE));
 }
 
 #[cfg(test)]
@@ -143,7 +148,7 @@ mod tests {
     const TEST_INPUT_STR: &str = include_str!("../example.txt");
 
     /// See `../example_solution.txt`
-    const EXAMPLE_SOLN_VALS: [(usize, usize); 11] = [
+    const EXAMPLE_SOLN_VALS_PART1: [(usize, usize); 11] = [
         (14, 2),
         (14, 4),
         (2, 6),
@@ -157,14 +162,48 @@ mod tests {
         (1, 64),
     ];
 
+    /// See `../example_solution.txt`
+    const EXAMPLE_SOLN_VALS_PART2: [(usize, usize); 14] = [
+        (32, 50),
+        (31, 52),
+        (29, 54),
+        (39, 56),
+        (25, 58),
+        (23, 60),
+        (20, 62),
+        (19, 64),
+        (12, 66),
+        (14, 68),
+        (12, 70),
+        (22, 72),
+        (4, 74),
+        (3, 76),
+    ];
+
     #[test]
     pub fn test_part1() {
         let puzzle_input = PuzzleInput::from_input(TEST_INPUT_STR);
 
-        for (i, &(_, num_steps)) in EXAMPLE_SOLN_VALS.iter().enumerate().rev() {
+        for (i, &(_, num_steps)) in EXAMPLE_SOLN_VALS_PART1.iter().enumerate().rev() {
             assert_eq!(
                 part1(&puzzle_input, num_steps),
-                EXAMPLE_SOLN_VALS[i..]
+                EXAMPLE_SOLN_VALS_PART1[i..]
+                    .iter()
+                    .map(|&(num_ways, _)| num_ways)
+                    .sum(),
+                "num_steps = {num_steps}"
+            );
+        }
+    }
+
+    #[test]
+    pub fn test_part2() {
+        let puzzle_input = PuzzleInput::from_input(TEST_INPUT_STR);
+
+        for (i, &(_, num_steps)) in EXAMPLE_SOLN_VALS_PART1.iter().enumerate().rev() {
+            assert_eq!(
+                part2(&puzzle_input, num_steps),
+                EXAMPLE_SOLN_VALS_PART2[i..]
                     .iter()
                     .map(|&(num_ways, _)| num_ways)
                     .sum(),
