@@ -2,8 +2,16 @@ mod direction;
 mod grid_cell;
 mod puzzle_input;
 
+use std::cmp::Ordering;
+
 use array2d::Array2D;
 use enum_iterator::all;
+
+// I'm pretty sure this impl breaks with unsigned integers which is buns
+// It also can't use manhattan distance for within. But not sure
+// if that's just this impl or if that's KD Trees in general
+// Need to look into it more. Maybe can redo day 20 and 17 after.
+use kd_tree::KdTree;
 
 use direction::Direction;
 use grid_cell::GridCell;
@@ -115,20 +123,59 @@ fn part1(puzzle_input: &PuzzleInput, steps_to_save: usize) -> usize {
             )
             .into_iter()
             .filter_map(|position_after_cheat| distance_grid[position_after_cheat])
-            .filter_map(move |dist_after_cheat| {
-                if dist_after_cheat > dist_before_cheat + 2 {
-                    Some(dist_after_cheat - dist_before_cheat - 2)
-                } else {
-                    None
-                }
+            .filter(move |&dist_after_cheat| {
+                dist_after_cheat >= dist_before_cheat + steps_to_save + 2
             })
         })
-        .filter(|&steps_saved| steps_saved >= steps_to_save)
         .count()
 }
 
 fn part2(puzzle_input: &PuzzleInput, steps_to_save: usize) -> usize {
-    todo!()
+    const RADIUS: isize = 20;
+
+    let distance_grid = &get_distance_grid(puzzle_input);
+
+    let kdpoints = distance_grid
+        .enumerate_row_major()
+        .filter_map(|((i, j), maybe_dist)| {
+            maybe_dist.map(|_| [isize::try_from(i).unwrap(), isize::try_from(j).unwrap()])
+        })
+        .collect::<Vec<_>>();
+
+    let kd_tree = KdTree::build(kdpoints);
+
+    kd_tree
+        .iter()
+        .flat_map(|arr_before_cheat| {
+            let &[i, j] = arr_before_cheat;
+            let position_before_cheat = (i.try_into().unwrap(), j.try_into().unwrap());
+            let dist_before_cheat = distance_grid[position_before_cheat].unwrap();
+            kd_tree
+                .within_by_cmp(|maybe_arr_after_cheat, k| {
+                    if maybe_arr_after_cheat[k] < arr_before_cheat[k] - RADIUS {
+                        Ordering::Less
+                    } else if maybe_arr_after_cheat[k] > arr_before_cheat[k] + RADIUS {
+                        Ordering::Greater
+                    } else {
+                        Ordering::Equal
+                    }
+                })
+                .into_iter()
+                .filter(move |&arr_after_cheat| {
+                    let cheat_dist = arr_after_cheat[0].abs_diff(arr_before_cheat[0])
+                        + arr_after_cheat[1].abs_diff(arr_before_cheat[1]);
+
+                    if cheat_dist > RADIUS as usize {
+                        return false;
+                    }
+
+                    let &[i2, j2] = arr_after_cheat;
+                    let position_after_cheat = (i2.try_into().unwrap(), j2.try_into().unwrap());
+                    let dist_after_cheat = distance_grid[position_after_cheat].unwrap();
+                    dist_after_cheat >= dist_before_cheat + steps_to_save + cheat_dist
+                })
+        })
+        .count()
 }
 
 fn main() {
@@ -184,7 +231,7 @@ mod tests {
     pub fn test_part1() {
         let puzzle_input = PuzzleInput::from_input(TEST_INPUT_STR);
 
-        for (i, &(_, num_steps)) in EXAMPLE_SOLN_VALS_PART1.iter().enumerate().rev() {
+        for (i, &(_, num_steps)) in EXAMPLE_SOLN_VALS_PART1.iter().enumerate() {
             assert_eq!(
                 part1(&puzzle_input, num_steps),
                 EXAMPLE_SOLN_VALS_PART1[i..]
@@ -200,7 +247,7 @@ mod tests {
     pub fn test_part2() {
         let puzzle_input = PuzzleInput::from_input(TEST_INPUT_STR);
 
-        for (i, &(_, num_steps)) in EXAMPLE_SOLN_VALS_PART1.iter().enumerate().rev() {
+        for (i, &(_, num_steps)) in EXAMPLE_SOLN_VALS_PART2.iter().enumerate().rev() {
             assert_eq!(
                 part2(&puzzle_input, num_steps),
                 EXAMPLE_SOLN_VALS_PART2[i..]

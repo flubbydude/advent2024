@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 array2d = "0.3.2"
 enum-iterator = "2.1.0"
+kd-tree = "0.6.0"
