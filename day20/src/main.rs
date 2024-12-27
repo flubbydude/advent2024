@@ -7,10 +7,11 @@ use std::cmp::Ordering;
 use array2d::Array2D;
 use enum_iterator::all;
 
-// I'm pretty sure this impl breaks with unsigned integers which is buns
-// It also can't use manhattan distance for within. But not sure
-// if that's just this impl or if that's KD Trees in general
+// It can't use manhattan distance for within, instead checks a cube.
+// But not sure if that's just this impl or if that's KD Trees in general
 // Need to look into it more. Maybe can redo day 20 and 17 after.
+// At least come back and do my own impl of KdTree which doesn't have
+// doodoo code in it
 use kd_tree::KdTree;
 
 use direction::Direction;
@@ -131,15 +132,13 @@ fn part1(puzzle_input: &PuzzleInput, steps_to_save: usize) -> usize {
 }
 
 fn part2(puzzle_input: &PuzzleInput, steps_to_save: usize) -> usize {
-    const RADIUS: isize = 20;
+    const RADIUS: usize = 20;
 
     let distance_grid = &get_distance_grid(puzzle_input);
 
     let kdpoints = distance_grid
         .enumerate_row_major()
-        .filter_map(|((i, j), maybe_dist)| {
-            maybe_dist.map(|_| [isize::try_from(i).unwrap(), isize::try_from(j).unwrap()])
-        })
+        .filter_map(|((i, j), maybe_dist)| maybe_dist.map(|_| [i, j]))
         .collect::<Vec<_>>();
 
     let kd_tree = KdTree::build(kdpoints);
@@ -148,11 +147,11 @@ fn part2(puzzle_input: &PuzzleInput, steps_to_save: usize) -> usize {
         .iter()
         .flat_map(|arr_before_cheat| {
             let &[i, j] = arr_before_cheat;
-            let position_before_cheat = (i.try_into().unwrap(), j.try_into().unwrap());
+            let position_before_cheat = (i, j);
             let dist_before_cheat = distance_grid[position_before_cheat].unwrap();
             kd_tree
                 .within_by_cmp(|maybe_arr_after_cheat, k| {
-                    if maybe_arr_after_cheat[k] < arr_before_cheat[k] - RADIUS {
+                    if maybe_arr_after_cheat[k] + RADIUS < arr_before_cheat[k] {
                         Ordering::Less
                     } else if maybe_arr_after_cheat[k] > arr_before_cheat[k] + RADIUS {
                         Ordering::Greater
@@ -165,12 +164,12 @@ fn part2(puzzle_input: &PuzzleInput, steps_to_save: usize) -> usize {
                     let cheat_dist = arr_after_cheat[0].abs_diff(arr_before_cheat[0])
                         + arr_after_cheat[1].abs_diff(arr_before_cheat[1]);
 
-                    if cheat_dist > RADIUS as usize {
+                    if cheat_dist > RADIUS {
                         return false;
                     }
 
                     let &[i2, j2] = arr_after_cheat;
-                    let position_after_cheat = (i2.try_into().unwrap(), j2.try_into().unwrap());
+                    let position_after_cheat = (i2, j2);
                     let dist_after_cheat = distance_grid[position_after_cheat].unwrap();
                     dist_after_cheat >= dist_before_cheat + steps_to_save + cheat_dist
                 })
