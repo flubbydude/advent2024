@@ -83,19 +83,16 @@ fn combine_empties(contiguous_disk_spaces: &mut Vec<ContiguousDiskSpace>, i: usi
     };
 
     let maybe_next_elem = contiguous_disk_spaces.get(i + 1);
-    let maybe_next_length = maybe_next_elem
-        .map(|elem| match elem {
-            &ContiguousDiskSpace::EmptySpace(EmptySpace { length }) => Some(length),
-            _ => None,
-        })
-        .flatten();
+    let maybe_next_length = maybe_next_elem.and_then(|elem| match elem {
+        &ContiguousDiskSpace::EmptySpace(EmptySpace { length }) => Some(length),
+        _ => None,
+    });
 
     if let Some(ContiguousDiskSpace::EmptySpace(EmptySpace {
         length: prev_length,
     })) = i
         .checked_sub(1)
-        .map(|prev_index| contiguous_disk_spaces.get_mut(prev_index))
-        .flatten()
+        .and_then(|prev_index| contiguous_disk_spaces.get_mut(prev_index))
     {
         *prev_length += cur_length;
         match maybe_next_length {
@@ -110,18 +107,15 @@ fn combine_empties(contiguous_disk_spaces: &mut Vec<ContiguousDiskSpace>, i: usi
         return i;
     }
 
-    match maybe_next_length {
-        Some(next_length) => {
-            let ContiguousDiskSpace::EmptySpace(EmptySpace { length: cur_length }) =
-                &mut contiguous_disk_spaces[i]
-            else {
-                panic!()
-            };
+    if let Some(next_length) = maybe_next_length {
+        let ContiguousDiskSpace::EmptySpace(EmptySpace { length: cur_length }) =
+            &mut contiguous_disk_spaces[i]
+        else {
+            panic!()
+        };
 
-            *cur_length += next_length;
-            contiguous_disk_spaces.remove(i + 1);
-        }
-        None => (),
+        *cur_length += next_length;
+        contiguous_disk_spaces.remove(i + 1);
     }
 
     i + 1
@@ -187,7 +181,6 @@ fn part2(input: &[u8]) -> usize {
         } else {
             let disk_file_length = disk_file.length;
 
-            // todo insert it in j + 1 and consolidate prev and next empty spaces
             let disk_file_to_insert = mem::replace(
                 &mut contiguous_disk_spaces[i],
                 ContiguousDiskSpace::EmptySpace(EmptySpace {

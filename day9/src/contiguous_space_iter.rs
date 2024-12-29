@@ -29,7 +29,7 @@ impl<'a> ContiguousDiskSpaceIter<'a> {
     }
 }
 
-impl<'a> Iterator for ContiguousDiskSpaceIter<'a> {
+impl Iterator for ContiguousDiskSpaceIter<'_> {
     type Item = ContiguousDiskSpace;
 
     fn next(&mut self) -> Option<Self::Item> {
