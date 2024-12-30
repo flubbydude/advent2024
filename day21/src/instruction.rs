@@ -6,3 +6,9 @@ pub enum Instruction {
     Direction(Direction),
     Activate,
 }
+
+impl From<Direction> for Instruction {
+    fn from(value: Direction) -> Self {
+        Instruction::Direction(value)
+    }
+}
