@@ -7,11 +7,33 @@ use crate::direction::{move_once_bounded, Direction};
 
 type Path = Vec<Direction>;
 
-pub struct KeyPadShortestPaths {
+pub fn build_keypad_from_string<T>(keypad_str: &str) -> Array2D<Option<T>>
+where
+    T: TryFrom<char>,
+    <T as TryFrom<char>>::Error: std::fmt::Debug,
+{
+    let num_rows = keypad_str.lines().count();
+    let num_columns = keypad_str.lines().next().unwrap().len();
+    Array2D::from_iter_row_major(
+        keypad_str.lines().flat_map(str::chars).map(|c| {
+            if c == ' ' {
+                None
+            } else {
+                Some(c.try_into().unwrap())
+            }
+        }),
+        num_rows,
+        num_columns,
+    )
+    .unwrap()
+}
+
+#[derive(Debug)]
+pub struct KeypadShortestPaths {
     shortest_paths: Array2D<Array2D<Vec<Path>>>,
 }
 
-impl KeyPadShortestPaths {
+impl KeypadShortestPaths {
     pub fn new_from_keypad<T>(keypad: &Array2D<Option<T>>) -> Self {
         let successors = |position| {
             all::<Direction>().filter_map(move |direction| {
@@ -77,14 +99,10 @@ impl KeyPadShortestPaths {
             prev_length += 1;
         }
 
-        KeyPadShortestPaths { shortest_paths }
+        KeypadShortestPaths { shortest_paths }
     }
 
-    pub fn shortest_paths_between(
-        &self,
-        source: (usize, usize),
-        target: (usize, usize),
-    ) -> &[Path] {
+    pub fn get_shortest_paths(&self, source: (usize, usize), target: (usize, usize)) -> &[Path] {
         let result = &self.shortest_paths[source][target];
         assert!(!result.is_empty());
         result
@@ -113,9 +131,9 @@ mod tests {
         ])
         .unwrap();
 
-        let shortest_paths = KeyPadShortestPaths::new_from_keypad(&keypad);
+        let shortest_paths = KeypadShortestPaths::new_from_keypad(&keypad);
 
-        let shortest_paths_east_to_north = shortest_paths.shortest_paths_between((1, 2), (0, 1));
+        let shortest_paths_east_to_north = shortest_paths.get_shortest_paths((1, 2), (0, 1));
         assert_eq!(shortest_paths_east_to_north.len(), 2);
         assert!(shortest_paths_east_to_north.contains(&vec![Direction::North, Direction::West]));
         assert!(shortest_paths_east_to_north.contains(&vec![Direction::West, Direction::North]));

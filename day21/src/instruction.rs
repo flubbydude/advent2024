@@ -12,3 +12,15 @@ impl From<Direction> for Instruction {
         Instruction::Direction(value)
     }
 }
+
+impl TryFrom<char> for Instruction {
+    type Error = char;
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        if value == 'A' {
+            Ok(Instruction::Activate)
+        } else {
+            Ok(Direction::try_from(value)?.into())
+        }
+    }
+}
