@@ -1,7 +1,6 @@
 use enum_iterator::Sequence;
-use num_derive::FromPrimitive;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence, FromPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
 #[repr(u8)]
 pub enum Direction {
     North,
@@ -40,6 +39,17 @@ impl TryFrom<char> for Direction {
             'v' => Ok(Direction::South),
             '<' => Ok(Direction::West),
             _ => Err(value),
+        }
+    }
+}
+
+impl From<Direction> for char {
+    fn from(value: Direction) -> Self {
+        match value {
+            Direction::North => '^',
+            Direction::East => '>',
+            Direction::South => 'v',
+            Direction::West => '<',
         }
     }
 }
