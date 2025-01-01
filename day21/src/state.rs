@@ -40,7 +40,7 @@ impl<const N: usize> State<N> {
         self.num_chars_output == keycode.len()
     }
 
-    // return false if can't do the instruction
+    // return empty if can't do the instruction
     fn process_instruction(
         mut self,
         instruction: Instruction,
