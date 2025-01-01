@@ -1,6 +1,6 @@
 use enum_iterator::Sequence;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence, Hash)]
 #[repr(u8)]
 pub enum Direction {
     North,

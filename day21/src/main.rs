@@ -19,30 +19,9 @@ fn get_numeric_part_of_code(keycode: &[u8]) -> usize {
         .fold(0, |acc, val| acc * 10 + val as usize)
 }
 
-// todo rethink this as search
-// the code needs to store state as the robot positions along with
-// what has been output so far, and one step is going to be a movement from my_position
-// which will affect the downstream robots as needed.
-// Also store the path at each step
-//
-// Prune branches if the code entered is incorrect
-// Also prune branches if any robot goes off grid
-//
-// Prune branches based on stored path length at that state if seen (HashMap<State, Vec<Instruction>>)
-// Also can prune branches if number robot veers off of an ideal path, like if the numeric robot goes
-//    in a direction away from the next key (ex: need to go from 9 to A but went left)
-//    - Could use heuristic as distance numeric robot hand to the next button needed?!
-//    - If numeric robot moves in a direction, make sure the heuristic goes down
-//
-// Quite optional since idk if easily possible, prune branch if a robot went back the way it just came or off
-// back on a path since the last press. Would cover the "number robot veers off of an ideal path"
-//
-// Much simpler!
-
-// Ideally paths can be stored as a trie of node of Instruction
-// so best can be HashMap<State, &Node> somehow
-fn shortest_sequence_length(keycode: &[u8]) -> usize {
-    let start_state = State::new_start_state();
+// N is the number of intermediate robots
+fn shortest_sequence_length<const N: usize>(keycode: &[u8]) -> usize {
+    let start_state = State::<N>::new_start_state();
     let mut frontier = VecDeque::from([start_state.clone()]);
     let mut seen = HashSet::from([start_state]);
 
@@ -52,17 +31,18 @@ fn shortest_sequence_length(keycode: &[u8]) -> usize {
         frontier = VecDeque::new();
 
         for state in prev_frontier {
-            for (_, state) in state.get_successors() {
-                if state.output() == keycode {
+            for succ in state.get_successors(keycode) {
+                if succ.is_goal(keycode) {
+                    println!("Sequence found for keycode = {keycode:?}");
                     return length;
                 }
 
-                if !keycode.starts_with(state.output()) || seen.contains(&state) {
+                if seen.contains(&succ) {
                     continue;
                 }
 
-                seen.insert(state.clone());
-                frontier.push_back(state);
+                seen.insert(succ.clone());
+                frontier.push_back(succ);
             }
         }
 
@@ -73,9 +53,24 @@ fn shortest_sequence_length(keycode: &[u8]) -> usize {
 }
 
 fn part1(keypad_codes: &[&[u8]]) -> usize {
+    const NUM_INTERMEDIATE_ROBOTS: usize = 2;
     keypad_codes
         .iter()
-        .map(|&code| shortest_sequence_length(code) * get_numeric_part_of_code(code))
+        .map(|&code| {
+            shortest_sequence_length::<NUM_INTERMEDIATE_ROBOTS>(code)
+                * get_numeric_part_of_code(code)
+        })
+        .sum()
+}
+
+fn part2(keypad_codes: &[&[u8]]) -> usize {
+    const NUM_INTERMEDIATE_ROBOTS: usize = 25;
+    keypad_codes
+        .iter()
+        .map(|&code| {
+            shortest_sequence_length::<NUM_INTERMEDIATE_ROBOTS>(code)
+                * get_numeric_part_of_code(code)
+        })
         .sum()
 }
 
@@ -85,6 +80,7 @@ fn main() {
     let codes = parse_keycodes(INPUT_STR);
 
     println!("{}", part1(&codes));
+    println!("{}", part2(&codes));
 }
 
 #[cfg(test)]
