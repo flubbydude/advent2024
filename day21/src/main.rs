@@ -65,12 +65,13 @@ fn part1(keypad_codes: &[&[u8]]) -> usize {
 
 // what if:
 // Get all the best paths for numeric robot
-// Then from that get all the best paths for normal robot N - 1
+// Then from that get all the best paths for normal robot N - 1 (to ANY POSITION)
 // Some will be pruned due to taking longer steps
-// From that, get all the best paths for normal robot N - 2
+// From that, get all the best paths for normal robot N - 2 (to ANY POSITION!)
 // ...
 // Get all/1 of the best paths for the main user guy
 // return the length.
+// gotta be backwards fr
 fn part2(keypad_codes: &[&[u8]]) -> usize {
     const NUM_INTERMEDIATE_ROBOTS: usize = 25;
     keypad_codes
