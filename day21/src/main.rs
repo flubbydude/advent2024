@@ -31,24 +31,25 @@ fn shortest_sequence_length<const N: usize>(keycode: &[u8]) -> usize {
     let instr_keypad = Keypad::get_instruction_keypad();
     let instr_keypad_start_pos = instr_keypad.position_of(&Instruction::Activate);
 
+    let memoization = &mut instr_keypad.create_memoization();
+
     // maybe prune paths by length at start of loop? Not sure if it
     // preserves the correct answer still...
     for i in 0..N {
-        println!("\n\n{i}:");
+        println!("{i}");
 
-        let shortest_paths = best_paths.iter().map(|p| p.len()).min().unwrap();
-
-        for path in &best_paths {
-            println!("{}", instrs_to_string(path));
-        }
+        // for path in &best_paths {
+        //     println!("{}", instrs_to_string(path));
+        // }
 
         let mut next_best_paths = Vec::new();
-        for best_path in best_paths
-            .into_iter()
-            .filter(|p| p.len() <= shortest_paths + 1)
-        {
+        for best_path in best_paths {
             next_best_paths.extend(
-                instr_keypad.get_successors_for_input_sequence(instr_keypad_start_pos, &best_path),
+                instr_keypad.get_successors_for_input_sequence_with_trie_memoization(
+                    instr_keypad_start_pos,
+                    &best_path,
+                    memoization,
+                ),
             );
         }
         best_paths = next_best_paths;

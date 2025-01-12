@@ -1,4 +1,4 @@
-use std::{borrow::BorrowMut, cell::RefCell, collections::HashMap, iter::once, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, iter::once, rc::Rc};
 
 use array2d::Array2D;
 use enum_iterator::all;
@@ -49,34 +49,70 @@ impl Keypad<Instruction> {
     ) -> Vec<Vec<Instruction>> {
         let mut best_paths: Vec<Vec<Instruction>> = vec![vec![]];
         let mut cur_trie = memoization[&current_position].clone();
-        let mut prev_key = None;
+        let mut prev_key = Instruction::Activate;
 
         for key in sequence_to_input {
             let maybe_next_trie = cur_trie.borrow().get_child(key);
             if let Some(next_trie) = maybe_next_trie {
                 cur_trie = next_trie;
+                prev_key = *key;
                 continue;
             }
 
-            let cur_trie_mut_ref = (*cur_trie).borrow_mut();
+            {
+                let mut cur_trie_ref_mut = (*cur_trie).borrow_mut();
 
-            let memoized_paths = cur_trie.borrow().borrow_mut().best_paths();
-            if let Some(k) = prev_key {
-                current_position = self.position_of(k);
+                current_position = self.position_of(&prev_key);
+                let (next_position, last_step_best_paths) =
+                    self.get_successors(current_position, key);
+                current_position = next_position;
+
+                let memoized_paths = cur_trie_ref_mut.best_paths();
+
+                let paths_to_insert = last_step_best_paths
+                    .into_iter()
+                    .flat_map(|last_step_best_path| {
+                        memoized_paths
+                            .iter()
+                            .map(|prev_best_path| {
+                                [prev_best_path.as_slice(), last_step_best_path.as_slice()].concat()
+                            })
+                            .collect::<Vec<_>>()
+                    })
+                    .collect::<Vec<_>>();
+
+                best_paths = paths_to_insert
+                    .iter()
+                    .flat_map(|next_path_part| {
+                        best_paths
+                            .iter()
+                            .map(|best_path| {
+                                [best_path.as_slice(), next_path_part.as_slice()].concat()
+                            })
+                            .collect::<Vec<_>>()
+                    })
+                    .collect();
+
+                cur_trie_ref_mut.insert(*key, paths_to_insert);
             }
 
-            best_paths = succs
-                .into_iter()
-                .flat_map(|next_path_part| {
-                    best_paths
-                        .iter()
-                        .map(|best_path| [best_path.as_slice(), next_path_part.as_slice()].concat())
-                        .collect::<Vec<_>>()
-                })
-                .collect();
-
-            prev_key = Some(key);
+            cur_trie = memoization[&current_position].clone();
+            prev_key = *key;
         }
+
+        best_paths = cur_trie
+            .borrow()
+            .best_paths()
+            .iter()
+            .flat_map(|next_path_part| {
+                best_paths
+                    .iter()
+                    .map(|prev_best_path| {
+                        [prev_best_path.as_slice(), next_path_part.as_slice()].concat()
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .collect();
 
         best_paths
     }
