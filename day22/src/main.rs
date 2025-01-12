@@ -69,6 +69,7 @@ fn part2(initial_secret_numbers: &[u64]) -> usize {
     let all_sequences = cached_profit_by_sequence
         .iter()
         .flat_map(HashMap::keys)
+        .copied()
         .collect::<HashSet<_>>();
 
     all_sequences
@@ -76,7 +77,7 @@ fn part2(initial_secret_numbers: &[u64]) -> usize {
         .map(|sequence| {
             cached_profit_by_sequence
                 .iter()
-                .map(|cached_profit| *cached_profit.get(sequence).unwrap_or(&0) as usize)
+                .map(|cached_profit| *cached_profit.get(&sequence).unwrap_or(&0) as usize)
                 .sum()
         })
         .max()
