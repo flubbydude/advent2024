@@ -1,6 +1,6 @@
 use enum_iterator::Sequence;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence, Hash, enum_map::Enum)]
 #[repr(u8)]
 pub enum Direction {
     North,
@@ -54,19 +54,10 @@ impl From<Direction> for char {
     }
 }
 
-fn move_once_checked(position: (usize, usize), direction: Direction) -> Option<(usize, usize)> {
+pub fn move_once_checked(position: (usize, usize), direction: Direction) -> Option<(usize, usize)> {
     let (di, dj) = direction.as_tuple();
     Some((
         position.0.checked_add_signed(di)?,
         position.1.checked_add_signed(dj)?,
     ))
-}
-
-pub fn move_once_bounded(
-    position: (usize, usize),
-    direction: Direction,
-    num_rows: usize,
-    num_columns: usize,
-) -> Option<(usize, usize)> {
-    move_once_checked(position, direction).filter(|&(i, j)| i < num_rows && j < num_columns)
 }

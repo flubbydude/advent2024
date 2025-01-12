@@ -1,11 +1,11 @@
-use std::collections::{HashSet, VecDeque};
-
-use state::State;
+use instruction::Instruction;
+use keypad::Keypad;
 
 mod direction;
 mod instruction;
 mod keypad;
-mod state;
+mod shortest_paths;
+mod trie;
 
 fn parse_keycodes(input_str: &str) -> Vec<&[u8]> {
     input_str.lines().map(str::as_bytes).collect()
@@ -20,36 +20,45 @@ fn get_numeric_part_of_code(keycode: &[u8]) -> usize {
 }
 
 // N is the number of intermediate robots
+// assume the best solution contains only shortest paths for each robot
+// and the best solution contains only shortest paths with at most 1 turn
 fn shortest_sequence_length<const N: usize>(keycode: &[u8]) -> usize {
-    let start_state = State::<N>::new_start_state();
-    let mut frontier = VecDeque::from([start_state.clone()]);
-    let mut seen = HashSet::from([start_state]);
+    let numeric_keypad = Keypad::get_numeric_keypad();
 
-    let mut length = 1;
-    while !frontier.is_empty() {
-        let prev_frontier = frontier;
-        frontier = VecDeque::new();
+    let mut best_paths = numeric_keypad
+        .get_successors_for_input_sequence(numeric_keypad.position_of(&b'A'), keycode);
 
-        for state in prev_frontier {
-            for succ in state.get_successors(keycode) {
-                if succ.is_goal(keycode) {
-                    println!("Sequence found for keycode = {keycode:?}");
-                    return length;
-                }
+    let instr_keypad = Keypad::get_instruction_keypad();
+    let instr_keypad_start_pos = instr_keypad.position_of(&Instruction::Activate);
 
-                if seen.contains(&succ) {
-                    continue;
-                }
+    // maybe prune paths by length at start of loop? Not sure if it
+    // preserves the correct answer still...
+    for i in 0..N {
+        println!("\n\n{i}:");
 
-                seen.insert(succ.clone());
-                frontier.push_back(succ);
-            }
+        let shortest_paths = best_paths.iter().map(|p| p.len()).min().unwrap();
+
+        for path in &best_paths {
+            println!("{}", instrs_to_string(path));
         }
 
-        length += 1;
+        let mut next_best_paths = Vec::new();
+        for best_path in best_paths
+            .into_iter()
+            .filter(|p| p.len() <= shortest_paths + 1)
+        {
+            next_best_paths.extend(
+                instr_keypad.get_successors_for_input_sequence(instr_keypad_start_pos, &best_path),
+            );
+        }
+        best_paths = next_best_paths;
     }
 
-    panic!("No sequence found for keycode = {keycode:?}")
+    best_paths.into_iter().map(|path| path.len()).min().unwrap()
+}
+
+fn instrs_to_string(instrs: &[Instruction]) -> String {
+    instrs.iter().copied().map(char::from).collect()
 }
 
 fn part1(keypad_codes: &[&[u8]]) -> usize {

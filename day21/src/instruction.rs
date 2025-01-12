@@ -2,7 +2,7 @@ use enum_iterator::Sequence;
 
 use crate::direction::Direction;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence, Hash, enum_map::Enum)]
 #[repr(u8)]
 pub enum Instruction {
     Direction(Direction),

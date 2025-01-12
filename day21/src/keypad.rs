@@ -1,9 +1,14 @@
+use std::{borrow::BorrowMut, cell::RefCell, collections::HashMap, iter::once, rc::Rc};
+
 use array2d::Array2D;
+use enum_iterator::all;
 use once_cell::sync::Lazy;
 
 use crate::{
-    direction::{move_once_bounded, Direction},
+    direction::Direction,
     instruction::Instruction,
+    shortest_paths::{iter_positions, BestPaths},
+    trie::InstructionTrie,
 };
 
 #[derive(Debug, Clone)]
@@ -13,6 +18,68 @@ impl Keypad<Instruction> {
     pub fn get_instruction_keypad() -> &'static Self {
         &INSTRUCTION_KEYPAD
     }
+
+    pub fn create_memoization(&self) -> HashMap<Position, Rc<RefCell<InstructionTrie>>> {
+        let mut result = HashMap::new();
+        for source in self
+            .0
+            .enumerate_row_major()
+            .filter_map(|(pos, val)| val.map(|_| pos))
+        {
+            let mut trie = InstructionTrie::new(vec![vec![]]);
+            for instruction in all::<Instruction>() {
+                trie.insert(
+                    instruction,
+                    self.get_successors(source, &instruction)
+                        .1
+                        .into_iter()
+                        .collect(),
+                );
+            }
+            result.insert(source, Rc::new(RefCell::new(trie)));
+        }
+        result
+    }
+
+    pub fn get_successors_for_input_sequence_with_trie_memoization(
+        &self,
+        mut current_position: (usize, usize),
+        sequence_to_input: &[Instruction],
+        memoization: &mut HashMap<Position, Rc<RefCell<InstructionTrie>>>,
+    ) -> Vec<Vec<Instruction>> {
+        let mut best_paths: Vec<Vec<Instruction>> = vec![vec![]];
+        let mut cur_trie = memoization[&current_position].clone();
+        let mut prev_key = None;
+
+        for key in sequence_to_input {
+            let maybe_next_trie = cur_trie.borrow().get_child(key);
+            if let Some(next_trie) = maybe_next_trie {
+                cur_trie = next_trie;
+                continue;
+            }
+
+            let cur_trie_mut_ref = (*cur_trie).borrow_mut();
+
+            let memoized_paths = cur_trie.borrow().borrow_mut().best_paths();
+            if let Some(k) = prev_key {
+                current_position = self.position_of(k);
+            }
+
+            best_paths = succs
+                .into_iter()
+                .flat_map(|next_path_part| {
+                    best_paths
+                        .iter()
+                        .map(|best_path| [best_path.as_slice(), next_path_part.as_slice()].concat())
+                        .collect::<Vec<_>>()
+                })
+                .collect();
+
+            prev_key = Some(key);
+        }
+
+        best_paths
+    }
 }
 
 impl Keypad<u8> {
@@ -20,6 +87,8 @@ impl Keypad<u8> {
         &NUMERIC_KEYPAD
     }
 }
+
+type Position = (usize, usize);
 
 impl<T: Eq> Keypad<T> {
     pub fn position_of(&self, key: &T) -> (usize, usize) {
@@ -34,18 +103,67 @@ impl<T: Eq> Keypad<T> {
         self.0[position].as_ref()
     }
 
-    pub fn get_successor(
+    // assume the best solution contains only shortest paths for each robot
+    // and the best solution contains only shortest paths with at most 1 turn
+    fn get_best_paths(
         &self,
-        position: (usize, usize),
-        direction: Direction,
-    ) -> Option<(usize, usize)> {
-        let new_position =
-            move_once_bounded(position, direction, self.0.num_rows(), self.0.num_columns())?;
-        if self.0[new_position].is_some() {
-            Some(new_position)
-        } else {
-            None
+        current_position: (usize, usize),
+        target_position: (usize, usize),
+    ) -> Vec<impl IntoIterator<Item = Direction>> {
+        BestPaths::with_at_most_one_turn(current_position, target_position)
+            .into_iter()
+            .filter(move |path| {
+                iter_positions(path, current_position)
+                    .into_iter()
+                    .all(|pos| self.get(pos).is_some())
+            })
+            .collect()
+    }
+
+    // return (next position, instructions)
+    fn get_successors(
+        &self,
+        current_position: (usize, usize),
+        next_input: &T,
+    ) -> ((usize, usize), impl IntoIterator<Item = Vec<Instruction>>) {
+        let next_position = self.position_of(next_input);
+        let best_paths = self.get_best_paths(current_position, next_position);
+
+        assert!(!best_paths.is_empty());
+
+        (
+            next_position,
+            best_paths.into_iter().map(|dirs| {
+                dirs.into_iter()
+                    .map(Instruction::from)
+                    .chain(once(Instruction::Activate))
+                    .collect()
+            }),
+        )
+    }
+
+    pub fn get_successors_for_input_sequence(
+        &self,
+        mut current_position: (usize, usize),
+        sequence_to_input: &[T],
+    ) -> Vec<Vec<Instruction>> {
+        let mut best_paths: Vec<Vec<Instruction>> = vec![vec![]];
+
+        for key in sequence_to_input {
+            let (next_pos, succs) = self.get_successors(current_position, key);
+            current_position = next_pos;
+            best_paths = succs
+                .into_iter()
+                .flat_map(|next_path_part| {
+                    best_paths
+                        .iter()
+                        .map(|best_path| [best_path.as_slice(), next_path_part.as_slice()].concat())
+                        .collect::<Vec<_>>()
+                })
+                .collect();
         }
+
+        best_paths
     }
 }
 
