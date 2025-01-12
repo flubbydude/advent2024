@@ -1,6 +1,6 @@
 mod secret_number;
 
-use std::{array, collections::HashMap};
+use std::collections::{HashMap, HashSet};
 
 use itertools::Itertools;
 
@@ -51,7 +51,9 @@ fn generate_sequences_and_profit_for_buyer(
             .collect_array::<SEQUENCE_LEN>()
             .unwrap();
 
-        result.entry(sequence).or_insert(*window.last().unwrap());
+        result
+            .entry(sequence)
+            .or_insert_with(|| *window.last().unwrap());
     }
 
     result
@@ -64,18 +66,17 @@ fn part2(initial_secret_numbers: &[u64]) -> usize {
         .map(generate_sequences_and_profit_for_buyer)
         .collect::<Vec<_>>();
 
-    let all_possible_sequences = array::from_fn::<_, SEQUENCE_LEN, _>(|_| (-9..=9))
-        .into_iter()
-        .multi_cartesian_product();
+    let all_sequences = cached_profit_by_sequence
+        .iter()
+        .flat_map(HashMap::keys)
+        .collect::<HashSet<_>>();
 
-    all_possible_sequences
+    all_sequences
         .into_iter()
         .map(|sequence| {
-            let sequence_array: [i8; SEQUENCE_LEN] = sequence.try_into().unwrap();
             cached_profit_by_sequence
                 .iter()
-                .map(|cached_profit| cached_profit.get(&sequence_array).unwrap_or(&0))
-                .map(|&profit| profit as usize)
+                .map(|cached_profit| *cached_profit.get(sequence).unwrap_or(&0) as usize)
                 .sum()
         })
         .max()
