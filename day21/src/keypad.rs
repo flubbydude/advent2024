@@ -1,130 +1,18 @@
-use std::{cell::RefCell, collections::HashMap, iter::once, rc::Rc};
+use std::iter::once;
 
 use array2d::Array2D;
-use enum_iterator::all;
+use itertools::Itertools;
+use memoize::memoize;
 use once_cell::sync::Lazy;
 
 use crate::{
     direction::Direction,
     instruction::Instruction,
     shortest_paths::{iter_positions, BestPaths},
-    trie::InstructionTrie,
 };
 
 #[derive(Debug, Clone)]
 pub struct Keypad<T>(Array2D<Option<T>>);
-
-impl Keypad<Instruction> {
-    pub fn get_instruction_keypad() -> &'static Self {
-        &INSTRUCTION_KEYPAD
-    }
-
-    pub fn create_memoization(&self) -> HashMap<Position, Rc<RefCell<InstructionTrie>>> {
-        let mut result = HashMap::new();
-        for source in self
-            .0
-            .enumerate_row_major()
-            .filter_map(|(pos, val)| val.map(|_| pos))
-        {
-            let mut trie = InstructionTrie::new(vec![vec![]]);
-            for instruction in all::<Instruction>() {
-                trie.insert(
-                    instruction,
-                    self.get_successors(source, &instruction)
-                        .1
-                        .into_iter()
-                        .collect(),
-                );
-            }
-            result.insert(source, Rc::new(RefCell::new(trie)));
-        }
-        result
-    }
-
-    pub fn get_successors_for_input_sequence_with_trie_memoization(
-        &self,
-        mut current_position: (usize, usize),
-        sequence_to_input: &[Instruction],
-        memoization: &mut HashMap<Position, Rc<RefCell<InstructionTrie>>>,
-    ) -> Vec<Vec<Instruction>> {
-        let mut best_paths: Vec<Vec<Instruction>> = vec![vec![]];
-        let mut cur_trie = memoization[&current_position].clone();
-        let mut prev_key = Instruction::Activate;
-
-        for key in sequence_to_input {
-            let maybe_next_trie = cur_trie.borrow().get_child(key);
-            if let Some(next_trie) = maybe_next_trie {
-                cur_trie = next_trie;
-                prev_key = *key;
-                continue;
-            }
-
-            {
-                let mut cur_trie_ref_mut = (*cur_trie).borrow_mut();
-
-                current_position = self.position_of(&prev_key);
-                let (next_position, last_step_best_paths) =
-                    self.get_successors(current_position, key);
-                current_position = next_position;
-
-                let memoized_paths = cur_trie_ref_mut.best_paths();
-
-                let paths_to_insert = last_step_best_paths
-                    .into_iter()
-                    .flat_map(|last_step_best_path| {
-                        memoized_paths
-                            .iter()
-                            .map(|prev_best_path| {
-                                [prev_best_path.as_slice(), last_step_best_path.as_slice()].concat()
-                            })
-                            .collect::<Vec<_>>()
-                    })
-                    .collect::<Vec<_>>();
-
-                best_paths = paths_to_insert
-                    .iter()
-                    .flat_map(|next_path_part| {
-                        best_paths
-                            .iter()
-                            .map(|best_path| {
-                                [best_path.as_slice(), next_path_part.as_slice()].concat()
-                            })
-                            .collect::<Vec<_>>()
-                    })
-                    .collect();
-
-                cur_trie_ref_mut.insert(*key, paths_to_insert);
-            }
-
-            cur_trie = memoization[&current_position].clone();
-            prev_key = *key;
-        }
-
-        best_paths = cur_trie
-            .borrow()
-            .best_paths()
-            .iter()
-            .flat_map(|next_path_part| {
-                best_paths
-                    .iter()
-                    .map(|prev_best_path| {
-                        [prev_best_path.as_slice(), next_path_part.as_slice()].concat()
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .collect();
-
-        best_paths
-    }
-}
-
-impl Keypad<u8> {
-    pub fn get_numeric_keypad() -> &'static Self {
-        &NUMERIC_KEYPAD
-    }
-}
-
-type Position = (usize, usize);
 
 impl<T: Eq> Keypad<T> {
     pub fn position_of(&self, key: &T) -> (usize, usize) {
@@ -156,38 +44,39 @@ impl<T: Eq> Keypad<T> {
             .collect()
     }
 
-    // return (next position, instructions)
+    // return possible best instructions needed to input next_input
+    // starting from the location of prev_input
     fn get_successors(
         &self,
-        current_position: (usize, usize),
+        prev_input: &T,
         next_input: &T,
-    ) -> ((usize, usize), impl IntoIterator<Item = Vec<Instruction>>) {
+    ) -> impl IntoIterator<Item = Vec<Instruction>> {
+        let prev_position = self.position_of(prev_input);
         let next_position = self.position_of(next_input);
-        let best_paths = self.get_best_paths(current_position, next_position);
+        let best_paths = self.get_best_paths(prev_position, next_position);
 
-        assert!(!best_paths.is_empty());
-
-        (
-            next_position,
-            best_paths.into_iter().map(|dirs| {
-                dirs.into_iter()
-                    .map(Instruction::from)
-                    .chain(once(Instruction::Activate))
-                    .collect()
-            }),
-        )
+        best_paths.into_iter().map(|dirs| {
+            dirs.into_iter()
+                .map(Instruction::from)
+                .chain(once(Instruction::Activate))
+                .collect()
+        })
     }
 
+    // return all possible best instructions needed to input next_input
+    // starting from start_key
     pub fn get_successors_for_input_sequence(
         &self,
-        mut current_position: (usize, usize),
+        start_key: &T,
         sequence_to_input: &[T],
     ) -> Vec<Vec<Instruction>> {
         let mut best_paths: Vec<Vec<Instruction>> = vec![vec![]];
 
-        for key in sequence_to_input {
-            let (next_pos, succs) = self.get_successors(current_position, key);
-            current_position = next_pos;
+        for (prev_key, next_key) in once(start_key)
+            .chain(sequence_to_input.iter())
+            .tuple_windows()
+        {
+            let succs = self.get_successors(prev_key, next_key);
             best_paths = succs
                 .into_iter()
                 .flat_map(|next_path_part| {
@@ -230,3 +119,46 @@ static NUMERIC_KEYPAD: Lazy<Keypad<u8>> = Lazy::new(|| {
     .unwrap()
     .into()
 });
+
+// robot_num = closest to numeric keypad is largest, 0 is me
+// return the number of instructions it takes for the robot
+
+// I high key have no idea what going on... need to redo this day
+#[memoize]
+fn shortest_length_helper(sequence_to_input: Vec<Instruction>, robot_num: usize) -> usize {
+    let mut result = 0;
+
+    for (prev_key, next_key) in once(Instruction::Activate)
+        .chain(sequence_to_input.into_iter())
+        .tuple_windows()
+    {
+        if robot_num == 0 {
+            result += INSTRUCTION_KEYPAD
+                .get_successors(&prev_key, &next_key)
+                .into_iter()
+                .next()
+                .unwrap()
+                .len();
+        } else {
+            result += INSTRUCTION_KEYPAD
+                .get_successors(&prev_key, &next_key)
+                .into_iter()
+                .map(|path| shortest_length_helper(path, robot_num - 1))
+                .min()
+                .unwrap();
+        }
+    }
+
+    result
+}
+
+pub fn shortest_sequence_length(keycode: &[u8], num_intermediate_robots: usize) -> usize {
+    let best_paths_for_numeric_bot =
+        NUMERIC_KEYPAD.get_successors_for_input_sequence(&b'A', keycode);
+
+    best_paths_for_numeric_bot
+        .into_iter()
+        .map(|path| shortest_length_helper(path, num_intermediate_robots - 1))
+        .min()
+        .unwrap()
+}
