@@ -124,6 +124,8 @@ static NUMERIC_KEYPAD: Lazy<Keypad<u8>> = Lazy::new(|| {
 // return the number of instructions it takes for the robot
 
 // I high key have no idea what going on... need to redo this day
+
+// I realize it because each press starts + ends at activate :O
 #[memoize]
 fn shortest_length_helper(sequence_to_input: Vec<Instruction>, robot_num: usize) -> usize {
     let mut result = 0;
