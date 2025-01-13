@@ -44,79 +44,44 @@ pub fn get_triangles(graph: &Graph) -> impl IntoIterator<Item = [ComputerId; 3]>
     result
 }
 
-fn get_connected_components(graph: &Graph) -> Vec<Vec<ComputerId>> {
-    fn dfs(
-        comp: ComputerId,
-        graph: &Graph,
-        explored: &mut HashMap<ComputerId, usize>,
-        next_label: usize,
-    ) -> usize {
-        if let Some(&label) = explored.get(&comp) {
-            return label;
-        }
-
-        explored.insert(comp, next_label);
-
-        for &succ in graph[&comp].iter() {
-            dfs(succ, graph, explored, next_label);
-        }
-
-        next_label
+// https://en.wikipedia.org/wiki/Bron%E2%80%93Kerbosch_algorithm
+fn bron_kerbosch(
+    r: &mut Vec<ComputerId>,
+    mut p: HashSet<ComputerId>,
+    mut x: HashSet<ComputerId>,
+    result: &mut Vec<Vec<ComputerId>>,
+    graph: &Graph,
+) {
+    if p.is_empty() && x.is_empty() {
+        result.push(r.to_vec());
+        return;
     }
 
-    let mut explored: HashMap<ComputerId, usize> = HashMap::new();
-    let mut result = Vec::new();
+    let pivot = p.union(&x).next().copied().unwrap();
+    let vertices_not_neighbors_of_pivot = p.difference(&graph[&pivot]).copied().collect::<Vec<_>>();
 
-    for &comp in graph.keys() {
-        let label = dfs(comp, graph, &mut explored, result.len());
-        if label == result.len() {
-            result.push(vec![comp]);
-        } else {
-            result[label].push(comp);
-        }
+    for comp in vertices_not_neighbors_of_pivot {
+        r.push(comp);
+
+        let new_p = p.intersection(&graph[&comp]).copied().collect();
+        let new_x = x.intersection(&graph[&comp]).copied().collect();
+        bron_kerbosch(r, new_p, new_x, result, graph);
+        r.pop();
+
+        p.remove(&comp);
+        x.insert(comp);
     }
-
-    result
-}
-
-fn get_subgraph<'a>(graph: &Graph, vertices: impl IntoIterator<Item = &'a ComputerId>) -> Graph {
-    let mut result = Graph::new();
-    for &vertex in vertices {
-        result.insert(vertex, graph[&vertex].clone());
-    }
-    result
-}
-
-fn get_inverse_graph(graph: &Graph) -> Graph {
-    graph
-        .iter()
-        .map(|(&comp_id, succs)| {
-            (
-                comp_id,
-                graph
-                    .keys()
-                    .filter(|&&other_id| other_id != comp_id && !succs.contains(&other_id))
-                    .copied()
-                    .collect(),
-            )
-        })
-        .collect()
-}
-
-fn get_maximum_clique_cc(connected_component: &Graph) -> Vec<ComputerId> {
-    todo!()
 }
 
 pub fn get_maximum_clique(graph: &Graph) -> Vec<ComputerId> {
-    let ccs = get_connected_components(graph);
-    match ccs.len() {
-        0 => Vec::new(),
-        1 => get_maximum_clique_cc(graph),
-        _ => ccs
-            .into_iter()
-            .map(|cc| get_subgraph(graph, &cc))
-            .map(|cc_subgraph| get_maximum_clique_cc(&cc_subgraph))
-            .max_by_key(Vec::len)
-            .unwrap(),
-    }
+    let mut result = Vec::new();
+    bron_kerbosch(
+        &mut Vec::new(),
+        graph.keys().copied().collect(),
+        HashSet::new(),
+        &mut result,
+        graph,
+    );
+
+    result.into_iter().max_by_key(Vec::len).unwrap()
 }
