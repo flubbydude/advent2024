@@ -24,6 +24,14 @@ fn part1(graph: &Graph) -> u64 {
 
 const INPUT: &str = include_str!("../input.txt");
 
+// part2:
+// 1. Create an addition circuit from 2 45 bit ints
+// 2. Create a function to check if 2 circuits are equal
+//      (start from z bits and traverse simultaneously) and why not
+//   - Must always output at least 2 things you can swap bc
+//     the swap cannot be in the same tree or there would be a cycle
+// 3. Run the function #2 until equal, fixing the swap each time!?
+// 4. Record what changed. Output it at the end
 fn main() {
     let graph = parse_graph(INPUT);
 
