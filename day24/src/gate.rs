@@ -23,8 +23,8 @@ impl Gate {
         [self.input1, self.input2]
     }
 
-    pub fn gate_type(&self) -> &GateType {
-        &self.gate_type
+    pub fn gate_type(&self) -> GateType {
+        self.gate_type
     }
 }
 

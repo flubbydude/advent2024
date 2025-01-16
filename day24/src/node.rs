@@ -18,6 +18,15 @@ pub enum NodeEnum {
     Gate,
 }
 
+impl NodeEnum {
+    pub fn gate(&self) -> Option<&Gate> {
+        match self {
+            NodeEnum::Gate(gate) => Some(gate),
+            _ => None,
+        }
+    }
+}
+
 impl FromStr for NodeEnum {
     type Err = anyhow::Error;
 
@@ -25,6 +34,6 @@ impl FromStr for NodeEnum {
         s.parse::<StartValue>()
             .map(NodeEnum::StartValue)
             .or(s.parse::<Gate>().map(NodeEnum::Gate))
-            .map_err(|_| anyhow!("Unable to parse node as StartValue nor Gate"))
+            .map_err(|_| anyhow!("Unable to parse node as StartValue nor as Gate"))
     }
 }

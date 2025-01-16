@@ -40,3 +40,15 @@ pub fn evaluate_all_values(graph: &Graph) -> HashMap<NodeName, bool> {
 
     result
 }
+
+pub fn successor_graph(graph: &Graph) -> HashMap<NodeName, Vec<NodeName>> {
+    let mut result: HashMap<NodeName, Vec<NodeName>> = HashMap::new();
+    for node in graph.values() {
+        if let NodeEnum::Gate(gate) = node {
+            for input_node_name in gate.inputs() {
+                result.entry(input_node_name).or_default().push(node.name());
+            }
+        }
+    }
+    result
+}

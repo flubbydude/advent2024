@@ -2,7 +2,7 @@ use anyhow::anyhow;
 
 use std::str::FromStr;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GateType {
     And,
     Or,

@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.95"
 enum_dispatch = "0.3.13"
+itertools = "0.14.0"
